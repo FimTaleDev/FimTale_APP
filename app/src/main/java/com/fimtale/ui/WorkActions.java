@@ -38,6 +38,7 @@ public final class WorkActions {
     private TopicDetailResponse data;
     private String stateToken;
     private boolean busy, known, closed;
+    private final ButtonLoadingIcon loadingIcon = new ButtonLoadingIcon();
     private Call<?> activeCall;
     private AlertDialog foldersDialog;
 
@@ -71,7 +72,7 @@ public final class WorkActions {
         if (activeCall != null) activeCall.cancel();
         activeCall = null;
         if (foldersDialog != null) foldersDialog.dismiss();
-        stateToken = token; known = false; busy = false;
+        stateToken = token; known = false; finishAction();
         refresh();
     }
 
@@ -100,27 +101,37 @@ public final class WorkActions {
         like.setText(String.valueOf(likes));
         favorite.setText(String.valueOf(favorites));
         highPraise.setText(activity.getString(R.string.work_hp_action));
-        boolean enabled = !busy && data != null && (known || !UserPreferences.isLoggedIn(activity));
+        boolean enabled = !closed && !busy && data != null && (known || !UserPreferences.isLoggedIn(activity));
         like.setEnabled(enabled); favorite.setEnabled(enabled); highPraise.setEnabled(enabled);
         like.setChecked(liked); favorite.setChecked(faved);
         highPraise.setChecked(hpGiven > 0);
-        like.setIcon(MdiIcons.drawable(activity, liked ? "thumb-up" : "thumb-up-outline"));
-        favorite.setIcon(MdiIcons.drawable(activity, faved ? "bookmark" : "bookmark-outline"));
-        highPraise.setIcon(MdiIcons.drawable(activity, hpGiven > 0 ? "star" : "star-outline"));
+        loadingIcon.setIcon(like, MdiIcons.drawable(activity, liked ? "thumb-up" : "thumb-up-outline"));
+        loadingIcon.setIcon(favorite, MdiIcons.drawable(activity, faved ? "bookmark" : "bookmark-outline"));
+        loadingIcon.setIcon(highPraise, MdiIcons.drawable(activity, hpGiven > 0 ? "star" : "star-outline"));
         like.setContentDescription(activity.getString(liked ? R.string.work_unlike_description : R.string.work_like_description, likes));
         favorite.setContentDescription(activity.getString(faved ? R.string.work_favorited_description : R.string.work_favorite_description, favorites));
         int hpTotal = data == null ? 0 : data.getTopicInfo().getHighPraise();
         highPraise.setContentDescription(activity.getString(hpGiven > 0 ? R.string.work_hp_sent_description : R.string.work_hp_description, hpTotal));
-        // Mutations can take a moment, but the action row should remain quiet while
-        // the server state is being reconciled. Only expose the retry affordance
-        // when the initial interaction state could not be loaded.
+        // The active icon shows progress through both the mutation and reconciliation.
+        // Expose a retry affordance only when the interaction state could not be loaded.
         status.setVisibility(!busy && !known ? View.VISIBLE : View.GONE);
         status.setText(!busy && !known ? activity.getString(R.string.work_interactions_load_failed) : "");
     }
 
+    private void beginAction(MaterialButton button) {
+        busy = true;
+        loadingIcon.start(button);
+        render();
+    }
+
+    private void finishAction() {
+        loadingIcon.stop();
+        busy = false;
+    }
+
     private void vote() {
         if (!authenticated()) return;
-        busy = true; render();
+        beginAction(like);
         String token = stateToken;
         Call<Void> call = RetrofitClient.getInstance().voteWork(token, new WorkInteractions.Vote(workId));
         activeCall = call;
@@ -149,7 +160,7 @@ public final class WorkActions {
         call.enqueue(new Callback<TopicDetailResponse>() {
             @Override public void onResponse(Call<TopicDetailResponse> call, Response<TopicDetailResponse> response) {
                 if (!valid(call, token)) return;
-                busy = false;
+                finishAction();
                 if (response.isSuccessful() && response.body() != null && response.body().getTopicInfo() != null) {
                     data = response.body(); known = data.viewer != null || token.isEmpty();
                     updated.accept(data);
@@ -158,21 +169,21 @@ public final class WorkActions {
             }
             @Override public void onFailure(Call<TopicDetailResponse> call, Throwable error) {
                 if (!valid(call, token)) return;
-                busy = false; render();
+                finishAction(); render();
             }
         });
     }
 
     private void chooseFavorites() {
         if (!authenticated()) return;
-        busy = true; render();
+        beginAction(favorite);
         String token = stateToken;
         Call<List<WorkInteractions.Folder>> call = RetrofitClient.getInstance().getFavoriteFolders(token);
         activeCall = call;
         call.enqueue(new Callback<List<WorkInteractions.Folder>>() {
             @Override public void onResponse(Call<List<WorkInteractions.Folder>> call, Response<List<WorkInteractions.Folder>> response) {
                 if (!valid(call, token)) return;
-                busy = false; render();
+                finishAction(); render();
                 if (!response.isSuccessful()) {
                     Toast.makeText(activity, ApiErrors.message(response), Toast.LENGTH_LONG).show(); return;
                 }
@@ -180,7 +191,7 @@ public final class WorkActions {
             }
             @Override public void onFailure(Call<List<WorkInteractions.Folder>> call, Throwable error) {
                 if (!valid(call, token)) return;
-                busy = false; render();
+                finishAction(); render();
                 Toast.makeText(activity, activity.getString(R.string.work_favorites_failed), Toast.LENGTH_SHORT).show();
             }
         });
@@ -201,7 +212,7 @@ public final class WorkActions {
 
     private void sendHighPraise(int count, String token) {
         if (!token.equals(UserPreferences.getToken(activity))) { onResume(); return; }
-        busy = true; render();
+        beginAction(highPraise);
         Call<Void> call = RetrofitClient.getInstance().highPraiseWork(token,
                 new WorkInteractions.HighPraise(workId, count));
         activeCall = call;
@@ -245,7 +256,7 @@ public final class WorkActions {
                     if (!token.equals(UserPreferences.getToken(activity))) { onResume(); return; }
                     List<WorkInteractions.Change> changes = WorkInteractions.changes(initial, selected);
                     if (changes.isEmpty()) return;
-                    busy = true; render();
+                    beginAction(favorite);
                     saveFavorites(changes, 0, token);
                 }).create();
         foldersDialog.show();
@@ -280,5 +291,7 @@ public final class WorkActions {
         closed = true;
         if (activeCall != null) activeCall.cancel();
         if (foldersDialog != null) foldersDialog.dismiss();
+        finishAction();
+        render();
     }
 }
