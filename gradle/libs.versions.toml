@@ -8,6 +8,7 @@ material = "1.12.0"
 # Keep the Java/View-compatible releases; newer Iconics releases add Compose dependencies.
 iconics = "5.4.0"
 communityMaterial = "7.0.96.0-kotlin"
+jparsec = "3.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -17,6 +18,7 @@ appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "a
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 iconics-core = { group = "com.mikepenz", name = "iconics-core", version.ref = "iconics" }
 iconics-community-material = { group = "com.mikepenz", name = "community-material-typeface", version.ref = "communityMaterial" }
+jparsec = { group = "org.jparsec", name = "jparsec", version.ref = "jparsec" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

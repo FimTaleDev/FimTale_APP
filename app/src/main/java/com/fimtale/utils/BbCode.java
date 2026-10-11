@@ -1,12 +1,16 @@
 package com.fimtale.utils;
 
 import com.fimtale.R;
+import com.fimtale.bbcode.BbCodeParser;
+import com.fimtale.bbcode.BbCodeParser.Node;
 
 import com.fimtale.network.SiteUrls;
 import org.commonmark.Extension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
-import org.commonmark.node.*;
+import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.Link;
+import org.commonmark.node.Image;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import java.net.URI;
@@ -23,9 +27,6 @@ public final class BbCode {
             "h1", "h2", "h3", "h4", "h5", "h6", "p", "quote", "left", "center", "right", "justify",
             "indent", "list", "*", "table", "tr", "th", "td", "img", "code", "markdown", "handbook",
             "collapse", "spoiler", "mention", "hash", "ref", "br", "hr"));
-    private static final Set<String> RAW = new HashSet<>(Arrays.asList("code", "markdown", "img", "handbook"));
-    private static final Pattern TOKEN = Pattern.compile("\\[(/?)([a-zA-Z][a-zA-Z0-9-]*|\\*)((?:[^\\]\"']++|\"[^\"]*+\"|'[^']*+')*+)\\]");
-    private static final Pattern ATTR = Pattern.compile("([\\w-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s]+))");
     private static final Pattern EMOJI = Pattern.compile(":ftemoji_([a-zA-Z0-9_]+):");
     private static final List<Extension> MD_EXTENSIONS = Arrays.asList(TablesExtension.create(), StrikethroughExtension.create());
     private static final Parser MARKDOWN = Parser.builder().extensions(MD_EXTENSIONS).build();
@@ -37,84 +38,7 @@ public final class BbCode {
     public static String toMarkdown(String source) {
         if (source == null || source.isEmpty()) return "";
         String normalized = source.replace("\r\n", "\n").replace('\r', '\n');
-        return "<div>" + render(parse(normalized), new Style()) + "</div>";
-    }
-
-    private static final class Tag {
-        String name, open = "", raw, text, body = "";
-        boolean closed;
-        int bodyStart;
-        Map<String, String> attrs = new HashMap<>();
-        List<Tag> children = new ArrayList<>();
-        Tag(String name) { this.name = name; }
-    }
-
-    private static void text(Tag parent, String value) {
-        if (value.isEmpty()) return;
-        Tag text = new Tag(""); text.text = value; parent.children.add(text);
-    }
-
-    private static Tag parse(String source) {
-        Tag root = new Tag("root"); root.closed = true;
-        List<Tag> stack = new ArrayList<>(); stack.add(root);
-        Matcher matcher = TOKEN.matcher(source);
-        int cursor = 0;
-        while (matcher.find(cursor)) {
-            Tag parent = stack.get(stack.size() - 1);
-            text(parent, source.substring(cursor, matcher.start()));
-            cursor = matcher.end();
-            String name = matcher.group(2).toLowerCase(Locale.ROOT);
-            boolean closing = !matcher.group(1).isEmpty();
-            if (!TAGS.contains(name)) { text(parent, matcher.group()); continue; }
-            if (closing) {
-                int match = stack.size() - 1;
-                while (match > 0 && !stack.get(match).name.equals(name)) match--;
-                if (match == 0) { text(parent, matcher.group()); continue; }
-                // Incomplete descendants keep their opening token visible; never consume following prose.
-                for (int i = stack.size() - 1; i >= match; i--) {
-                    Tag tag = stack.remove(i);
-                    tag.closed = i == match || tag.name.equals("*");
-                    if (tag.name.equals("collapse")) tag.body = source.substring(tag.bodyStart, matcher.start());
-                }
-                continue;
-            }
-            if (name.equals("*")) {
-                int list = stack.size() - 1;
-                while (list > 0 && !stack.get(list).name.equals("list")) list--;
-                if (list == 0) { text(parent, matcher.group()); continue; }
-                while (stack.size() > list + 1) {
-                    Tag tag = stack.remove(stack.size() - 1);
-                    tag.closed = tag.name.equals("*");
-                }
-                parent = stack.get(list);
-            }
-            if (stack.size() >= 128) { text(parent, matcher.group()); continue; }
-            Tag tag = new Tag(name); tag.open = matcher.group(); tag.bodyStart = cursor;
-            String tail = matcher.group(3).trim();
-            if (tail.startsWith("=")) tag.attrs.put("value", unquote(tail.substring(1).trim()));
-            else {
-                Matcher attrs = ATTR.matcher(tail);
-                while (attrs.find()) tag.attrs.put(attrs.group(1).toLowerCase(Locale.ROOT),
-                        attrs.group(2) != null ? attrs.group(2) : attrs.group(3) != null ? attrs.group(3) : attrs.group(4));
-            }
-            parent.children.add(tag);
-            if (name.equals("br") || name.equals("hr")) { tag.closed = true; continue; }
-            if (RAW.contains(name)) {
-                Matcher close = Pattern.compile("\\[/" + name + "\\]", Pattern.CASE_INSENSITIVE).matcher(source);
-                if (!close.find(cursor)) { text(tag, source.substring(cursor)); cursor = source.length(); break; }
-                int end = close.start();
-                tag.raw = source.substring(cursor, end); tag.closed = true;
-                cursor = end + name.length() + 3;
-            } else stack.add(tag);
-        }
-        text(stack.get(stack.size() - 1), source.substring(cursor));
-        return root;
-    }
-
-    private static String unquote(String s) {
-        if (s.length() >= 2 && ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'"))))
-            return s.substring(1, s.length() - 1);
-        return s;
+        return "<div>" + render(normalized, BbCodeParser.parse(normalized, TAGS), new Style()) + "</div>";
     }
 
     private static final class Style {
@@ -129,9 +53,9 @@ public final class BbCode {
         }
     }
 
-    private static String render(Tag tag, Style inherited) {
+    private static String render(String source, Node tag, Style inherited) {
         if (tag.text != null) return inherited.apply(literal(tag.text));
-        String name = tag.name, value = decode(tag.attrs.getOrDefault("value", ""));
+        String name = tag.name, value = decode(tag.argument);
         Style style = new Style(inherited);
         if (tag.closed) {
             if (name.equals("color") && safeColor(value)) style.color = value;
@@ -144,24 +68,24 @@ public final class BbCode {
         }
         if (tag.closed && name.equals("collapse")) {
             String title = value.trim().isEmpty() ? AppStrings.get(R.string.bbcode_expand_default) : value.replace('\n', ' ');
-            String encoded = Base64.getEncoder().encodeToString(tag.body.getBytes(StandardCharsets.UTF_8));
+            String encoded = Base64.getEncoder().encodeToString(source.substring(tag.contentStart, tag.contentEnd).getBytes(StandardCharsets.UTF_8));
             // The body is rendered only in its bottom sheet, never in the surrounding article.
             return "<p><span data-collapse=\"" + encoded + "\"" + attribute("data-title", title)
                     + ">" + escape(title) + "</span></p>";
         }
         StringBuilder children = new StringBuilder();
-        for (Tag child : tag.children) {
+        for (Node child : tag.children) {
             if ((name.equals("list") || name.equals("table") || name.equals("tr"))
                     && child.text != null && child.text.trim().isEmpty()) continue;
-            children.append(render(child, style));
+            children.append(render(source, child, style));
         }
         String body = children.toString();
-        if (!tag.closed && !name.equals("root")) return literal(tag.open) + body;
+        if (!tag.closed && !name.equals("root")) return literal(source.substring(tag.start, tag.contentStart)) + body;
         if (name.matches("b|i|u|s|sub|sup|h[1-6]|p|table|tr|th|td")) {
             String attrs = "";
             if (name.equals("td") || name.equals("th")) {
                 attrs = positiveAttr(tag, "colspan", 32) + positiveAttr(tag, "rowspan", 100)
-                        + attribute("align", alignment(tag.attrs.get("align")));
+                        + attribute("align", alignment(tag.attributes.get("align")));
                 // Keep even an empty cell addressable by the native table renderer.
                 if (body.isEmpty()) body = "&#160;";
             }
@@ -181,42 +105,42 @@ public final class BbCode {
                 String list = value.matches("[1aAiI]") ? "ol" : "ul";
                 return "<" + list + ">" + body + "</" + list + ">";
             case "*": return "<li>" + body + "</li>";
-            case "url": return link(safeUrl(value.isEmpty() ? plain(tag).trim() : value, false), body);
+            case "url": return link(safeUrl(value.isEmpty() ? plain(source, tag).trim() : value, false), body);
             case "mention":
-                String user = plain(tag).trim().replaceFirst("^@", "");
+                String user = plain(source, tag).trim().replaceFirst("^@", "");
                 if (user.isEmpty()) {
-                    for (Tag child : tag.children) {
-                        Matcher legacyName = Pattern.compile("/user/@([^/?#]+)").matcher(child.attrs.getOrDefault("value", ""));
+                    for (Node child : tag.children) {
+                        Matcher legacyName = Pattern.compile("/user/@([^/?#]+)").matcher(child.argument);
                         if (child.name.equals("url") && legacyName.find()) { user = legacyName.group(1); break; }
                     }
                 }
                 String uid = positive(value, Integer.MAX_VALUE);
                 return link(SiteUrls.SITE + "/user/@" + encode(user) + (uid.isEmpty() ? "" : "?uid=" + uid), "@" + escape(user));
             case "hash":
-                String hash = plain(tag).trim().replaceAll("^#+|#+$", "");
+                String hash = plain(source, tag).trim().replaceAll("^#+|#+$", "");
                 String query = "hashtags:\"" + escapeLucene(hash) + "\"";
                 return link(SiteUrls.SITE + "/search/work?filter=" + encode(query), "#" + escape(hash) + "#");
             case "ref":
-                String id = positive(tag.attrs.get("id"), Integer.MAX_VALUE);
-                String type = tag.attrs.getOrDefault("type", "");
+                String id = positive(tag.attributes.get("id"), Integer.MAX_VALUE);
+                String type = tag.attributes.getOrDefault("type", "");
                 if (id.isEmpty() || !type.matches("[13457]")) return body;
-                String label = plain(tag).trim();
+                String label = plain(source, tag).trim();
                 if (label.isEmpty()) label = AppStrings.get(R.string.common_entity_number, (type.equals("1") ? AppStrings.get(R.string.work_label) : type.equals("3") ? AppStrings.get(R.string.work_chapter_label) : type.equals("4") ? AppStrings.get(R.string.comments_title) : type.equals("5") ? AppStrings.get(R.string.report_target_channel) : AppStrings.get(R.string.profile_user_label)), id);
                 return "<p><span data-ref=\"" + type + ":" + id + "\">" + escape(label) + "</span></p>";
             case "img":
-                String src = safeUrl(decode(tag.raw).trim(), true);
+                String src = safeUrl(decode(source.substring(tag.contentStart, tag.contentEnd)).trim(), true);
                 if (src == null) return "";
-                return "<p><img" + attribute("src", src) + attribute("alt", decode(tag.attrs.getOrDefault("alt", "")))
+                return "<p><img" + attribute("src", src) + attribute("alt", decode(tag.attributes.getOrDefault("alt", "")))
                         + dimensionAttr(tag, "width") + dimensionAttr(tag, "height") + "></p>";
-            case "code": return "<pre><code>" + escape(decode(tag.raw)).replace("\n", "&#10;") + "</code></pre>";
-            case "markdown": return markdown(decode(tag.raw));
+            case "code": return "<pre><code>" + escape(decode(source.substring(tag.contentStart, tag.contentEnd))).replace("\n", "&#10;") + "</code></pre>";
+            case "markdown": return markdown(decode(source.substring(tag.contentStart, tag.contentEnd)));
             case "handbook": return "<p>" + escape(AppStrings.get(R.string.bbcode_handbook_unavailable)) + "</p>";
             default: return body;
         }
     }
 
     private static String markdown(String source) {
-        Node doc = MARKDOWN.parse(source.replaceAll("(?i)<br\\s*/?>", "\n\n"));
+        org.commonmark.node.Node doc = MARKDOWN.parse(source.replaceAll("(?i)<br\\s*/?>", "\n\n"));
         doc.accept(new AbstractVisitor() {
             @Override public void visit(Link link) {
                 String url = safeUrl(link.getDestination(), false);
@@ -227,7 +151,7 @@ public final class BbCode {
                 String url = safeUrl(img.getDestination(), true);
                 if (url == null) unwrap(img); else img.setDestination(url);
             }
-            private void unwrap(Node node) {
+            private void unwrap(org.commonmark.node.Node node) {
                 while (node.getFirstChild() != null) node.insertBefore(node.getFirstChild());
                 node.unlink();
             }
@@ -240,11 +164,11 @@ public final class BbCode {
         return result.toString().replace("\n", "");
     }
 
-    private static String plain(Tag tag) {
+    private static String plain(String source, Node tag) {
         if (tag.text != null) return decode(tag.text);
-        if (tag.raw != null) return decode(tag.raw);
+        if (tag.closed && BbCodeParser.literal(tag.name)) return decode(source.substring(tag.contentStart, tag.contentEnd));
         StringBuilder out = new StringBuilder();
-        for (Tag child : tag.children) out.append(plain(child));
+        for (Node child : tag.children) out.append(plain(source, child));
         return out.toString();
     }
     private static String literal(String value) {
@@ -285,9 +209,9 @@ public final class BbCode {
         try { int number = Integer.parseInt(value); return number > 0 ? String.valueOf(Math.min(max, number)) : ""; }
         catch (RuntimeException e) { return ""; }
     }
-    private static String positiveAttr(Tag tag, String attr, int max) { return attribute(attr, positive(tag.attrs.get(attr), max)); }
-    private static String dimensionAttr(Tag tag, String attr) {
-        String value = tag.attrs.getOrDefault(attr, "");
+    private static String positiveAttr(Node tag, String attr, int max) { return attribute(attr, positive(tag.attributes.get(attr), max)); }
+    private static String dimensionAttr(Node tag, String attr) {
+        String value = tag.attributes.getOrDefault(attr, "");
         return attribute(attr, value.matches("\\d{1,4}(?:\\.\\d{1,2})?(?:px|%|em)?") ? value : "");
     }
     static boolean safeColor(String value) {
