@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="crash_feedback_title">发送崩溃反馈？</string>
-    <string name="crash_feedback_message">上次应用意外退出。是否发送诊断信息，帮助我们定位问题？</string>
+    <string name="crash_feedback_message">应用似乎崩了。是否发送诊断信息，帮助我们定位问题？</string>
     <string name="crash_feedback_data">将附上错误类型、错误堆栈、应用及系统版本、设备型号和出错页面。不收集登录凭据或文章正文。</string>
     <string name="crash_feedback_description">补充当时的操作（可选）</string>
     <string name="crash_feedback_send">发送反馈</string>
@@ -12,9 +12,9 @@
     <string name="crash_feedback_success">反馈已发送，可在“我的报告”中查看。</string>
     <string name="crash_feedback_login">登录后发送</string>
     <string name="crash_feedback_login_required">发送反馈需要登录。诊断信息已保存在本机，登录后请再次确认发送。</string>
-    <string name="crash_feedback_uncertain">暂时无法确认是否发送成功，诊断信息仍保存在本机。请先查看“我的报告”，确认未收到后再重试。</string>
-    <string name="crash_feedback_session_changed">登录状态已变更，发送结果尚未确认。请检查“我的报告”后再决定是否重试。</string>
-    <string name="crash_feedback_storage_error">无法保存反馈状态，请稍后重试。</string>
+    <string name="crash_feedback_uncertain">无法确认是否发送成功，请先查看“我的报告”。</string>
+    <string name="crash_feedback_session_changed">登录状态已变更。</string>
+    <string name="crash_feedback_storage_error">无法保存反馈状态。</string>
     <string name="crash_feedback_startup_screen">启动阶段</string>
     <string name="crash_feedback_native_exit">系统记录了原生崩溃，未获取到 Java 异常堆栈。</string>
     <string name="crash_feedback_java_exit">系统记录了应用崩溃，未获取到 Java 异常堆栈。</string>
