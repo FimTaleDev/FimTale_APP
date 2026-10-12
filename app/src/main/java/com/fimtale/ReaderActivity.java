@@ -117,6 +117,7 @@ public class ReaderActivity extends AppCompatActivity {
     private TextView tvBatteryLevel;
     private android.widget.TextClock tcSystemTime;
     private ImageView ivBattery;
+    private ImageView ivCharging;
     private ProgressBar scrollProgressBar;
 
     private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
@@ -133,7 +134,10 @@ public class ReaderActivity extends AppCompatActivity {
                 int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
                 boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                         status == BatteryManager.BATTERY_STATUS_FULL;
-                ivBattery.setImageDrawable(MdiIcons.battery(ReaderActivity.this, batteryPct, isCharging));
+                // Keep the battery horizontal; the charging glyph is shown beside it so the
+                // lightning mark remains on the battery's right side.
+                ivBattery.setImageDrawable(MdiIcons.battery(ReaderActivity.this, batteryPct, false));
+                if (ivCharging != null) ivCharging.setVisibility(isCharging ? View.VISIBLE : View.GONE);
             }
         }
     };
@@ -308,6 +312,7 @@ public class ReaderActivity extends AppCompatActivity {
         tvBatteryLevel = findViewById(R.id.tvBatteryLevel);
         tcSystemTime = findViewById(R.id.tcSystemTime);
         ivBattery = findViewById(R.id.ivBattery);
+        ivCharging = findViewById(R.id.ivCharging);
         
         scrollProgressBar = findViewById(R.id.scrollProgressBar);
         
@@ -1324,6 +1329,9 @@ public class ReaderActivity extends AppCompatActivity {
         
         if (ivBattery != null) {
             ivBattery.setImageTintList(android.content.res.ColorStateList.valueOf(textColor));
+        }
+        if (ivCharging != null) {
+            ivCharging.setImageTintList(android.content.res.ColorStateList.valueOf(textColor));
         }
         
         if (adapter != null) adapter.notifyDataSetChanged();

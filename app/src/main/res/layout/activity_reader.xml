@@ -117,6 +117,17 @@
                     android:contentDescription="@null"
                     app:mdiIcon="battery"
                     app:tint="?android:attr/textColorSecondary" />
+
+                <com.fimtale.ui.icons.MdiImageView
+                    android:id="@+id/ivCharging"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_marginStart="2dp"
+                    android:contentDescription="@null"
+                    android:visibility="gone"
+                    app:mdiIcon="lightning-bolt"
+                    app:tint="?android:attr/textColorSecondary"
+                    tools:visibility="visible" />
             </LinearLayout>
 
         </LinearLayout>
