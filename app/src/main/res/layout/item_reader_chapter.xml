@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="56dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="14dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/readerChapterNumber"
+        android:layout_width="36dp"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/readerChapterName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginEnd="12dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:textSize="15sp" />
+
+    <com.fimtale.ui.icons.MdiImageView
+        android:id="@+id/readerChapterCurrent"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:contentDescription="@null"
+        app:mdiIcon="book-open-page-variant"
+        app:tint="?attr/colorPrimary" />
+</LinearLayout>

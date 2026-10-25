@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="reader_paper_background">#F4EEDC</color>
+    <color name="reader_paper_text">#423D32</color>
+    <color name="reader_matcha_background">#E3EBDD</color>
+    <color name="reader_matcha_text">#303B2F</color>
+    <color name="reader_ocean_background">#DFE9EF</color>
+    <color name="reader_ocean_text">#303E48</color>
+    <color name="reader_night_background">#17191D</color>
+    <color name="reader_night_text">#C6C7C9</color>
+    <color name="reader_menu_scrim">#38000000</color>
+</resources>

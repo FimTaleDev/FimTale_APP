@@ -37,4 +37,26 @@
     <string name="reader_next_chapter">下一章</string>
     <string name="reader_catalog_count">章节目录（%1$d）</string>
     <string name="reader_percent">%1$.1f%%</string>
+    <string name="reader_settings">阅读设置</string>
+    <string name="reader_typography">排版</string>
+    <string name="reader_theme_night">夜间</string>
+    <string name="reader_theme_day">日间</string>
+    <string name="reader_close_menu">收起阅读菜单</string>
+    <string name="reader_previous_chapter">上一章</string>
+    <string name="reader_chapter_progress">本章阅读进度</string>
+    <string name="reader_chapter_progress_value">本章已读 %1$.0f%%</string>
+    <string name="reader_follow_system_brightness">跟随系统</string>
+    <string name="reader_font_size_value">%1$.0f</string>
+    <string name="reader_line_spacing_value">%1$.1f 倍</string>
+    <string name="reader_page_margin">页边距</string>
+    <string name="reader_margin_compact">紧凑</string>
+    <string name="reader_margin_normal">适中</string>
+    <string name="reader_margin_relaxed">宽松</string>
+    <string name="reader_locate_chapter">定位当前</string>
+    <string name="reader_current_chapter">正在阅读：%1$s</string>
+    <string name="reader_chapter_number">%1$02d</string>
+    <string name="reader_theme_sample">文</string>
+    <string name="reader_comments">评论</string>
+    <string name="reader_paged_mode">左右翻页</string>
+    <string name="reader_scroll_mode">连续滚动</string>
 </resources>

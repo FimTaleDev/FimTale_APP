@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingHorizontal="2dp"
+    android:importantForAccessibility="noHideDescendants">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/readerThemeSwatch"
+        android:layout_width="match_parent"
+        android:layout_height="38dp"
+        app:cardCornerRadius="10dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp">
+
+        <TextView
+            android:id="@+id/readerThemeSample"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/reader_theme_sample"
+            android:textSize="17sp" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/readerThemeName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:textSize="11sp" />
+</LinearLayout>

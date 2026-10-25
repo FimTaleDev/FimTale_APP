@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -41,15 +42,20 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.graphics.Insets;
+import androidx.core.graphics.ColorUtils;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.graphics.Typeface;
-import android.animation.ArgbEvaluator;
-import android.animation.ValueAnimator;
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.transition.ChangeBounds;
+import androidx.transition.Fade;
 import androidx.transition.TransitionManager;
+import androidx.transition.TransitionSet;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.bumptech.glide.Glide;
@@ -79,8 +85,11 @@ import io.noties.markwon.image.glide.GlideImagesPlugin;
 import okhttp3.ResponseBody;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.transition.MaterialSharedAxis;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -109,6 +118,21 @@ public class ReaderActivity extends AppCompatActivity {
     private View btnChapterList;
     private View btnSettings;
     private View guideOverlay;
+    private View readerNavigationPanel;
+    private TextView tvReaderMenuTitle;
+    private TextView tvReaderMenuSubtitle;
+    private TextView tvFontSizeValue;
+    private TextView tvLineSpacingValue;
+    private TextView btnReaderTheme;
+    private Slider sliderReaderProgress;
+    private MaterialCheckBox checkSystemBrightness;
+    private TabLayout tabPageMargin;
+    private boolean isScrubbingProgress;
+    private boolean isAdjustingTypography;
+    private int scrubbingChapterId;
+    private int currentPageMargin = 24;
+    private int readerTextColor;
+    private int readerBackgroundColor;
     
     private View readerHeader;
     private View readerFooter;
@@ -143,7 +167,7 @@ public class ReaderActivity extends AppCompatActivity {
     };
     private boolean batteryReceiverRegistered;
 
-    private LinearLayout settingsPanel;
+    private View settingsPanel;
     private LinearLayout chapterListPanel;
     private RecyclerView rvChapterList;
     private Slider sliderFontSize;
@@ -321,6 +345,15 @@ public class ReaderActivity extends AppCompatActivity {
         sliderBrightness = findViewById(R.id.sliderBrightness);
         tabPageMode = findViewById(R.id.tabPageMode);
         tabThemeMode = findViewById(R.id.tabThemeMode);
+        tabPageMargin = findViewById(R.id.tabPageMargin);
+        readerNavigationPanel = findViewById(R.id.readerNavigationPanel);
+        tvReaderMenuTitle = findViewById(R.id.tvReaderMenuTitle);
+        tvReaderMenuSubtitle = findViewById(R.id.tvReaderMenuSubtitle);
+        tvFontSizeValue = findViewById(R.id.tvFontSizeValue);
+        tvLineSpacingValue = findViewById(R.id.tvLineSpacingValue);
+        btnReaderTheme = findViewById(R.id.btnReaderTheme);
+        sliderReaderProgress = findViewById(R.id.sliderReaderProgress);
+        checkSystemBrightness = findViewById(R.id.checkSystemBrightness);
 
         markwon = Markwon.builder(this)
                 .usePlugin(BbCodeRendering.htmlPlugin(this))
@@ -371,9 +404,31 @@ public class ReaderActivity extends AppCompatActivity {
         btnChapterList.setOnClickListener(v -> toggleChapterList());
 
         btnSettings.setOnClickListener(v -> toggleSettingsPanel());
+        findViewById(R.id.btnCloseReaderMenu).setOnClickListener(v -> hideMenu());
+        findViewById(R.id.btnLocateChapter).setOnClickListener(v -> locateCurrentChapter());
+        findViewById(R.id.btnPreviousChapter).setOnClickListener(v -> {
+            int previous = getPrevChapterId();
+            if (previous >= 0) jumpToChapter(previous);
+        });
+        findViewById(R.id.btnNextChapter).setOnClickListener(v -> {
+            if (nextChoices().size() > 1) {
+                hideMenu();
+                showBranchChoices();
+            } else {
+                int next = getNextChapterId();
+                if (next >= 0) jumpToChapter(next);
+            }
+        });
+        findViewById(R.id.btnReaderComments).setOnClickListener(v -> {
+            if (!contentReady) return;
+            hideMenu();
+            showReaderCommentsBottomSheet(currentTopicId);
+        });
 
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        currentFontSize = prefs.getFloat("reader_font_size", 20f);
+        currentFontSize = Math.max(12f, Math.min(40f, Math.round(prefs.getFloat("reader_font_size", 20f) / 2f) * 2f));
+        currentPageMargin = prefs.getInt("reader_page_margin", 24);
+        if (currentPageMargin != 16 && currentPageMargin != 24 && currentPageMargin != 32) currentPageMargin = 24;
         boolean isVertical = prefs.getBoolean("reader_is_vertical", false);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -390,7 +445,7 @@ public class ReaderActivity extends AppCompatActivity {
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
                 if (recyclerView.getVisibility() != View.VISIBLE) return;
-                if (isMenuVisible && dy != 0) {
+                if (isMenuVisible && dy != 0 && recyclerView.getScrollState() == RecyclerView.SCROLL_STATE_DRAGGING) {
                     hideMenu();
                 }
                 updateVerticalProgress();
@@ -401,79 +456,7 @@ public class ReaderActivity extends AppCompatActivity {
         adapter = new ReaderAdapter(pages, false);
         viewPager.setAdapter(adapter);
 
-        updateFontSize(currentFontSize);
-        sliderFontSize.setValue(currentFontSize);
-
-        float currentLineSpacing = UserPreferences.getLineSpacing(this);
-        sliderLineSpacing.setValue(currentLineSpacing);
-        sliderLineSpacing.addOnChangeListener((slider, value, fromUser) -> {
-            if (fromUser) {
-                UserPreferences.setLineSpacing(this, value);
-                rebuildReaderContent(true);
-            }
-        });
-        
-        sliderBrightness.setLabelFormatter(value -> (int)(value * 100) + "%");
-        
-        android.view.WindowManager.LayoutParams lp = getWindow().getAttributes();
-        float currentBrightness = lp.screenBrightness;
-        if (currentBrightness < 0) {
-            try {
-                int systemBrightness = android.provider.Settings.System.getInt(getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS);
-                currentBrightness = systemBrightness / 255f;
-            } catch (Exception e) {
-                currentBrightness = 0.5f;
-            }
-        }
-        
-        if (currentBrightness < 0.01f) currentBrightness = 0.01f;
-        if (currentBrightness > 1.0f) currentBrightness = 1.0f;
-        
-        sliderBrightness.setValue(currentBrightness);
-        
-        sliderBrightness.addOnChangeListener((slider, value, fromUser) -> {
-            if (fromUser) {
-                android.view.WindowManager.LayoutParams layoutParams = getWindow().getAttributes();
-                layoutParams.screenBrightness = value;
-                getWindow().setAttributes(layoutParams);
-            }
-        });
-
-        if (isVertical) {
-            TabLayout.Tab tab = tabPageMode.getTabAt(1);
-            if (tab != null) tab.select();
-        } else {
-            TabLayout.Tab tab = tabPageMode.getTabAt(0);
-            if (tab != null) tab.select();
-        }
-
-        int currentTheme = UserPreferences.getReaderTheme(this);
-        TabLayout.Tab themeTab = tabThemeMode.getTabAt(currentTheme);
-        if (themeTab != null) themeTab.select();
-        applyReaderTheme(currentTheme);
-
-        tabThemeMode.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                int theme = tab.getPosition();
-                UserPreferences.setReaderTheme(ReaderActivity.this, theme);
-                applyReaderTheme(theme);
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {}
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {}
-        });
-
-        sliderFontSize.addOnChangeListener((slider, value, fromUser) -> {
-            if (fromUser) {
-                currentFontSize = value;
-                updateFontSize(currentFontSize);
-                saveFontSize();
-            }
-        });
+        setupReadingControls();
 
         tabPageMode.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
@@ -550,6 +533,145 @@ public class ReaderActivity extends AppCompatActivity {
         progressSaveHandler.postDelayed(progressSaveRunnable, PROGRESS_SAVE_INTERVAL);
 
         initGestureDetector();
+        menuOverlay.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> updateReaderPanelHeight());
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if (guideOverlay.getVisibility() == View.VISIBLE) guideOverlay.performClick();
+                else if (isMenuVisible) hideMenu();
+                else finish();
+            }
+        });
+    }
+
+    private void setupReadingControls() {
+        sliderFontSize.setValue(currentFontSize);
+        tvFontSizeValue.setText(getString(R.string.reader_font_size_value, currentFontSize));
+        sliderFontSize.setLabelFormatter(value -> getString(R.string.reader_font_size_value, value));
+        float spacing = Math.max(1f, Math.min(3f, 1f + Math.round((UserPreferences.getLineSpacing(this) - 1f) / 0.2f) * 0.2f));
+        if (spacing != UserPreferences.getLineSpacing(this)) UserPreferences.setLineSpacing(this, spacing);
+        sliderLineSpacing.setValue(spacing);
+        tvLineSpacingValue.setText(getString(R.string.reader_line_spacing_value, spacing));
+        sliderLineSpacing.setLabelFormatter(value -> getString(R.string.reader_line_spacing_value, value));
+        Slider.OnSliderTouchListener typographyTouch = new Slider.OnSliderTouchListener() {
+            @Override public void onStartTrackingTouch(@NonNull Slider slider) { isAdjustingTypography = true; }
+            @Override public void onStopTrackingTouch(@NonNull Slider slider) {
+                isAdjustingTypography = false;
+                if (slider == sliderFontSize) updateFontSize(slider.getValue());
+                else rebuildReaderContent(true);
+            }
+        };
+        sliderFontSize.addOnSliderTouchListener(typographyTouch);
+        sliderLineSpacing.addOnSliderTouchListener(typographyTouch);
+        sliderFontSize.addOnChangeListener((slider, value, fromUser) -> {
+            tvFontSizeValue.setText(getString(R.string.reader_font_size_value, value));
+            if (!fromUser) return;
+            currentFontSize = value;
+            saveFontSize();
+            if (!isAdjustingTypography) updateFontSize(value);
+        });
+        sliderLineSpacing.addOnChangeListener((slider, value, fromUser) -> {
+            tvLineSpacingValue.setText(getString(R.string.reader_line_spacing_value, value));
+            if (!fromUser) return;
+            UserPreferences.setLineSpacing(this, value);
+            if (!isAdjustingTypography) rebuildReaderContent(true);
+        });
+
+        float systemBrightness = 0.5f;
+        try {
+            systemBrightness = android.provider.Settings.System.getInt(getContentResolver(),
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f;
+        } catch (android.provider.Settings.SettingNotFoundException ignored) { }
+        float brightness = Math.max(0.01f, Math.min(1f, prefs.getFloat("reader_brightness", systemBrightness)));
+        sliderBrightness.setValue(brightness);
+        sliderBrightness.setLabelFormatter(value -> getString(R.string.common_percent, Math.round(value * 100)));
+        checkSystemBrightness.setChecked(prefs.getBoolean("reader_follow_system_brightness", true));
+        applyReaderBrightness();
+        checkSystemBrightness.setOnCheckedChangeListener((button, checked) -> {
+            prefs.edit().putBoolean("reader_follow_system_brightness", checked).apply();
+            applyReaderBrightness();
+        });
+        sliderBrightness.addOnChangeListener((slider, value, fromUser) -> {
+            if (!fromUser) return;
+            prefs.edit().putFloat("reader_brightness", value).apply();
+            applyReaderBrightness();
+        });
+
+        TabLayout.Tab modeTab = tabPageMode.getTabAt(prefs.getBoolean("reader_is_vertical", false) ? 1 : 0);
+        if (modeTab != null) modeTab.select();
+        TabLayout.Tab marginTab = tabPageMargin.getTabAt((currentPageMargin - 16) / 8);
+        if (marginTab != null) marginTab.select();
+        tabPageMargin.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override public void onTabSelected(TabLayout.Tab tab) {
+                currentPageMargin = 16 + tab.getPosition() * 8;
+                prefs.edit().putInt("reader_page_margin", currentPageMargin).apply();
+                rebuildReaderContent(true);
+            }
+            @Override public void onTabUnselected(TabLayout.Tab tab) { }
+            @Override public void onTabReselected(TabLayout.Tab tab) { }
+        });
+
+        for (int i = 0; i < tabThemeMode.getTabCount(); i++) {
+            TabLayout.Tab tab = tabThemeMode.getTabAt(i);
+            if (tab == null) continue;
+            tab.setCustomView(R.layout.item_reader_theme);
+            ((TextView) tab.getCustomView().findViewById(R.id.readerThemeName)).setText(tab.getText());
+        }
+        int theme = Math.max(0, Math.min(4, UserPreferences.getReaderTheme(this)));
+        if (theme != UserPreferences.getReaderTheme(this)) UserPreferences.setReaderTheme(this, theme);
+        TabLayout.Tab themeTab = tabThemeMode.getTabAt(theme);
+        if (themeTab != null) themeTab.select();
+        applyReaderTheme(theme);
+        tabThemeMode.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override public void onTabSelected(TabLayout.Tab tab) {
+                int selected = tab.getPosition();
+                UserPreferences.setReaderTheme(ReaderActivity.this, selected);
+                if (!isReaderDark(selected)) prefs.edit().putInt("reader_day_theme", selected).apply();
+                applyReaderTheme(selected);
+            }
+            @Override public void onTabUnselected(TabLayout.Tab tab) { }
+            @Override public void onTabReselected(TabLayout.Tab tab) { }
+        });
+        btnReaderTheme.setOnClickListener(v -> {
+            int current = UserPreferences.getReaderTheme(this);
+            int target = 4;
+            if (isReaderDark(current)) {
+                target = Math.max(0, Math.min(3, prefs.getInt("reader_day_theme", 1)));
+                if (isReaderDark(target)) target = 1;
+            } else {
+                prefs.edit().putInt("reader_day_theme", current).apply();
+            }
+            TabLayout.Tab tab = tabThemeMode.getTabAt(target);
+            if (tab != null) tab.select();
+        });
+
+        sliderReaderProgress.setLabelFormatter(value -> getString(R.string.reader_percent, value / 10d));
+        sliderReaderProgress.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+            @Override public void onStartTrackingTouch(@NonNull Slider slider) {
+                isScrubbingProgress = true;
+                scrubbingChapterId = currentTopicId;
+            }
+            @Override public void onStopTrackingTouch(@NonNull Slider slider) {
+                isScrubbingProgress = false;
+                if (contentReady && !isLoadingChapter) positionReaderAtProgress(scrubbingChapterId, slider.getValue() / 1000d);
+                updateReaderMenu();
+            }
+        });
+        sliderReaderProgress.addOnChangeListener((slider, value, fromUser) -> {
+            if (!fromUser || !contentReady || isLoadingChapter) return;
+            tvReaderMenuSubtitle.setText(getString(R.string.reader_chapter_progress_value, value / 10d));
+            // Accessibility and keyboard adjustments do not send touch tracking callbacks.
+            if (!isScrubbingProgress) positionReaderAtProgress(currentTopicId, value / 1000d);
+        });
+        updateReaderMenu();
+    }
+
+    private void applyReaderBrightness() {
+        boolean followSystem = checkSystemBrightness.isChecked();
+        sliderBrightness.setEnabled(!followSystem);
+        android.view.WindowManager.LayoutParams params = getWindow().getAttributes();
+        params.screenBrightness = followSystem
+                ? android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : sliderBrightness.getValue();
+        getWindow().setAttributes(params);
     }
 
     private void initGestureDetector() {
@@ -714,6 +836,7 @@ public class ReaderActivity extends AppCompatActivity {
         chapterList = data.getMenu();
         filteredChapterList.clear(); filteredChapterList.addAll(chapterList);
         if (chapterListAdapter != null) chapterListAdapter.updateData(filteredChapterList);
+        updateReaderMenu();
     }
     private int cacheKey(int chapterId) { return chapterId == 0 ? -rootTopicId : chapterId; }
 
@@ -804,7 +927,6 @@ public class ReaderActivity extends AppCompatActivity {
         currentPostId = chapter.id;
         currentTopicId = chapter.id;
         currentProgress = 0;
-        topToolbar.setTitle(chapterTitle);
         tvChapterTitle.setText(chapterTitle);
         rebuildReaderContent(false);
         positionReader(currentTopicId, scrollToEnd);
@@ -961,9 +1083,11 @@ public class ReaderActivity extends AppCompatActivity {
     private void rebuildReaderContent(boolean preservePosition) {
         boolean vertical = recyclerView.getVisibility() == View.VISIBLE;
         VerticalPosition verticalPosition = preservePosition && vertical ? captureVerticalPosition() : null;
-        int oldPage = viewPager.getCurrentItem();
+        int oldPage = Math.min(viewPager.getCurrentItem(), Math.max(0, pages.size() - 1));
         int pageChapterId = oldPage < pages.size() ? pages.get(oldPage).chapterId : currentTopicId;
-        int oldPageOffset = Math.max(0, oldPage - chapterStartIndex(pages, pageChapterId));
+        int oldChapterStart = chapterStartIndex(pages, pageChapterId);
+        int relativeTextOffset = oldPage < pageStartOffsets.size() && oldChapterStart < pageStartOffsets.size()
+                ? pageStartOffsets.get(oldPage) - pageStartOffsets.get(oldChapterStart) : 0;
         int pageTarget = 0;
         if (!preservePosition) pendingVerticalPosition = null;
         rebuildingReaderContent = true;
@@ -974,8 +1098,12 @@ public class ReaderActivity extends AppCompatActivity {
                 if (vertical && verticalPosition != null) {
                     restoreVerticalPosition(verticalPosition);
                 } else if (!vertical && !pages.isEmpty()) {
-                    pageTarget = Math.min(chapterEndIndex(pages, pageChapterId),
-                            chapterStartIndex(pages, pageChapterId) + oldPageOffset);
+                    pageTarget = chapterStartIndex(pages, pageChapterId);
+                    if (pageStartOffsets.size() == pages.size()) {
+                        int targetOffset = pageStartOffsets.get(pageTarget) + relativeTextOffset;
+                        while (pageTarget + 1 < pages.size() && pages.get(pageTarget + 1).chapterId == pageChapterId
+                                && pageStartOffsets.get(pageTarget + 1) <= targetOffset) pageTarget++;
+                    }
                     viewPager.setCurrentItem(pageTarget, false);
                 }
             }
@@ -994,6 +1122,7 @@ public class ReaderActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (menuOverlay != null) TransitionManager.endTransitions((ViewGroup) menuOverlay);
         if (moreMenu != null) moreMenu.dismiss();
         if (readerCommentsSheetPanel != null) readerCommentsSheetPanel.close();
         if (readerCommentsSheet != null) readerCommentsSheet.dismiss();
@@ -1024,7 +1153,7 @@ public class ReaderActivity extends AppCompatActivity {
     
     private void setupChapterList() {
         rvChapterList.setLayoutManager(new LinearLayoutManager(this));
-        chapterListAdapter = new ChapterListAdapter(false);
+        chapterListAdapter = new ChapterListAdapter();
         rvChapterList.setAdapter(chapterListAdapter);
     }
 
@@ -1048,8 +1177,9 @@ public class ReaderActivity extends AppCompatActivity {
         if (isFinishing() || isDestroyed()) return;
         if (readerCommentsSheet != null && readerCommentsSheet.isShowing()) return;
 
-        View content = getLayoutInflater().inflate(R.layout.item_reader_comment_page, null);
-        readerCommentsSheet = new BottomSheetDialog(this);
+        Context commentsContext = readerCommentsContext();
+        View content = LayoutInflater.from(commentsContext).inflate(R.layout.item_reader_comment_page, null);
+        readerCommentsSheet = new BottomSheetDialog(commentsContext);
         readerCommentsSheet.setContentView(content);
         readerCommentsSheetPanel = new ReaderCommentsPanel(this, content, rootTopicId);
         readerCommentsSheetPanel.bind(chapterId);
@@ -1090,7 +1220,6 @@ public class ReaderActivity extends AppCompatActivity {
         currentTopicId = chapter.id;
         currentPostId = chapter.id;
         chapterTitle = chapter.title;
-        topToolbar.setTitle(chapterTitle);
         int chapterStart = chapterStartIndex(pages, chapter.id);
         int chapterEnd = chapterEndIndex(pages, chapter.id);
         int realTotal = Math.max(1, chapterEnd - chapterStart + 1);
@@ -1129,7 +1258,6 @@ public class ReaderActivity extends AppCompatActivity {
         currentTopicId = chapter.id;
         currentPostId = chapter.id;
         chapterTitle = chapter.title;
-        if (!TextUtils.equals(topToolbar.getTitle(), chapterTitle)) topToolbar.setTitle(chapterTitle);
         int chapterStart = chapterStartIndex(verticalPages, chapter.id);
         int chapterEnd = chapterEndIndex(verticalPages, chapter.id);
         int chapterOffset = paragraphStartOffsets.get(chapterStart);
@@ -1163,6 +1291,7 @@ public class ReaderActivity extends AppCompatActivity {
     private void updateHeader(String title, String progressText) {
         if (!TextUtils.equals(tvChapterTitle.getText(), title)) tvChapterTitle.setText(title);
         if (!TextUtils.equals(tvChapterProgress.getText(), progressText)) tvChapterProgress.setText(progressText);
+        updateReaderMenu();
     }
 
     private void saveReadingProgress() {
@@ -1176,6 +1305,7 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private void updateFontSize(float size) {
+        currentFontSize = size;
         rebuildReaderContent(true);
     }
 
@@ -1271,77 +1401,165 @@ public class ReaderActivity extends AppCompatActivity {
         if (contentReady) positionReaderAtProgress(topicId, progress);
     }
     
-    private void applyReaderTheme(int theme) {
-        int bgColor;
-        int textColor;
-        boolean isDark;
-        
+    private int readerBackground(int theme) {
         switch (theme) {
-            case 1: // 纸黄
-                bgColor = Color.parseColor("#E4E2CC");
-                textColor = Color.BLACK;
-                isDark = false;
-                break;
-            case 2: // 抹茶
-                bgColor = Color.parseColor("#E1EED5");
-                textColor = Color.BLACK;
-                isDark = false;
-                break;
-            case 3: // 海蓝
-                bgColor = Color.parseColor("#D5E3EF");
-                textColor = Color.BLACK;
-                isDark = false;
-                break;
-            default: // 默认
-                bgColor = getThemeColor(android.R.attr.colorBackground);
-                textColor = getThemeColor(com.google.android.material.R.attr.colorOnBackground);
-                int nightModeFlags = getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
-                isDark = (nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES);
-                break;
+            case 1: return getColor(R.color.reader_paper_background);
+            case 2: return getColor(R.color.reader_matcha_background);
+            case 3: return getColor(R.color.reader_ocean_background);
+            case 4: return getColor(R.color.reader_night_background);
+            default: return getThemeColor(android.R.attr.colorBackground);
         }
+    }
 
-        findViewById(android.R.id.content).setBackgroundColor(bgColor);
-        viewPager.setBackgroundColor(bgColor);
-        recyclerView.setBackgroundColor(bgColor);
-        
-        boolean isVertical = recyclerView.getVisibility() == View.VISIBLE;
-        if (theme != 0 || isVertical) {
-            readerHeader.setBackgroundColor(bgColor);
-            readerFooter.setBackgroundColor(bgColor);
-        } else {
-            readerHeader.setBackground(null);
-            readerFooter.setBackground(null);
+    private int readerForeground(int theme) {
+        switch (theme) {
+            case 1: return getColor(R.color.reader_paper_text);
+            case 2: return getColor(R.color.reader_matcha_text);
+            case 3: return getColor(R.color.reader_ocean_text);
+            case 4: return getColor(R.color.reader_night_text);
+            default: return getThemeColor(com.google.android.material.R.attr.colorOnBackground);
         }
+    }
+
+    private boolean isReaderDark(int theme) {
+        return theme == 4 || theme == 0 && (getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    private Context readerCommentsContext() {
+        android.content.res.Configuration config = new android.content.res.Configuration(getResources().getConfiguration());
+        config.uiMode = (config.uiMode & ~android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                | (isReaderDark(UserPreferences.getReaderTheme(this))
+                ? android.content.res.Configuration.UI_MODE_NIGHT_YES : android.content.res.Configuration.UI_MODE_NIGHT_NO);
+        android.view.ContextThemeWrapper context = new android.view.ContextThemeWrapper(this, R.style.Theme_Fimtale);
+        context.applyOverrideConfiguration(config);
+        return context;
+    }
+
+    private ColorStateList enabledReaderColor(int color) {
+        return new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled}, new int[]{}},
+                new int[]{ColorUtils.blendARGB(readerBackgroundColor, color, 0.3f), color});
+    }
+
+    private int readerAccent() {
+        int accent = getThemeColor(com.google.android.material.R.attr.colorPrimary);
+        for (int step = 0; step <= 10; step++) {
+            int candidate = ColorUtils.blendARGB(accent, readerTextColor, step / 10f);
+            if (ColorUtils.calculateContrast(candidate, readerBackgroundColor) >= 4.5) return candidate;
+        }
+        return readerTextColor;
+    }
+
+    private void applyReaderTheme(int theme) {
+        readerBackgroundColor = readerBackground(theme);
+        readerTextColor = readerForeground(theme);
+        int secondary = ColorUtils.blendARGB(readerBackgroundColor, readerTextColor, 0.75f);
+        findViewById(R.id.readerRoot).setBackgroundColor(readerBackgroundColor);
+        viewPager.setBackgroundColor(readerBackgroundColor);
+        recyclerView.setBackgroundColor(readerBackgroundColor);
+        readerHeader.setBackgroundColor(readerBackgroundColor);
+        readerFooter.setBackgroundColor(readerBackgroundColor);
+        for (TextView label : new TextView[]{tvChapterTitle, tvChapterProgress, tvBatteryLevel, tcSystemTime}) {
+            label.setTextColor(secondary);
+        }
+        ivBattery.setImageTintList(ColorStateList.valueOf(secondary));
+        ivCharging.setImageTintList(ColorStateList.valueOf(secondary));
+
+        topToolbar.getBackground().mutate().setTint(readerBackgroundColor);
+        bottomSheetContainer.getBackground().mutate().setTint(readerBackgroundColor);
+        tintReaderControls(menuOverlay, secondary);
+        topToolbar.setTitleTextColor(readerTextColor);
+        topToolbar.setNavigationIconTint(readerTextColor);
+        for (int i = 0; i < topToolbar.getMenu().size(); i++) {
+            android.graphics.drawable.Drawable icon = topToolbar.getMenu().getItem(i).getIcon();
+            if (icon != null) icon.mutate().setTint(readerTextColor);
+        }
+        tvReaderMenuSubtitle.setTextColor(secondary);
+        tvFontSizeValue.setTextColor(secondary);
+        tvLineSpacingValue.setTextColor(secondary);
+        TextView locate = findViewById(R.id.btnLocateChapter);
+        int accent = readerAccent();
+        locate.setTextColor(enabledReaderColor(accent));
+        locate.setCompoundDrawableTintList(enabledReaderColor(accent));
+        btnReaderTheme.setText(isReaderDark(theme) ? R.string.reader_theme_day : R.string.reader_theme_night);
+        btnReaderTheme.setCompoundDrawablesRelativeWithIntrinsicBounds(null,
+                MdiIcons.drawable(this, isReaderDark(theme) ? "weather-sunny" : "weather-night"), null, null);
+        btnReaderTheme.setCompoundDrawableTintList(ColorStateList.valueOf(secondary));
+        updateThemeSwatches(theme, secondary);
+        updateBottomMenuButtons();
 
         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        if (controller != null) {
-            boolean useLightBar = !isDark;
-            if (theme >= 1 && theme <= 3) useLightBar = true;
-            
-            controller.setAppearanceLightStatusBars(useLightBar);
-            controller.setAppearanceLightNavigationBars(useLightBar);
-        }
-
-        if (tvChapterTitle != null) tvChapterTitle.setTextColor(textColor);
-        if (tvChapterProgress != null) tvChapterProgress.setTextColor(textColor);
-        if (tvBatteryLevel != null) tvBatteryLevel.setTextColor(textColor);
-        if (tcSystemTime != null) tcSystemTime.setTextColor(textColor);
-        
-        if (ivBattery != null) {
-            ivBattery.setImageTintList(android.content.res.ColorStateList.valueOf(textColor));
-        }
-        if (ivCharging != null) {
-            ivCharging.setImageTintList(android.content.res.ColorStateList.valueOf(textColor));
-        }
-        
+        controller.setAppearanceLightStatusBars(!isReaderDark(theme));
+        controller.setAppearanceLightNavigationBars(!isReaderDark(theme));
         if (adapter != null) adapter.notifyDataSetChanged();
         if (recyclerAdapter != null) recyclerAdapter.notifyDataSetChanged();
+        if (chapterListAdapter != null) chapterListAdapter.notifyDataSetChanged();
+    }
+
+    private void tintReaderControls(View view, int secondary) {
+        int accent = readerAccent();
+        if (view instanceof TabLayout) {
+            TabLayout tabs = (TabLayout) view;
+            tabs.setTabTextColors(secondary, accent);
+            tabs.setSelectedTabIndicatorColor(accent);
+            return;
+        }
+        if (view instanceof Slider) {
+            Slider slider = (Slider) view;
+            slider.setThumbTintList(enabledReaderColor(accent));
+            slider.setTrackActiveTintList(enabledReaderColor(accent));
+            slider.setTrackInactiveTintList(ColorStateList.valueOf(
+                    ColorUtils.blendARGB(readerBackgroundColor, readerTextColor, 0.15f)));
+            slider.setHaloTintList(ColorStateList.valueOf(ColorUtils.setAlphaComponent(accent, 35)));
+            return;
+        }
+        if (view instanceof TextView) {
+            TextView text = (TextView) view;
+            text.setTextColor(enabledReaderColor(readerTextColor));
+            text.setCompoundDrawableTintList(enabledReaderColor(readerTextColor));
+        }
+        if (view instanceof MaterialCheckBox) {
+            ((MaterialCheckBox) view).setButtonTintList(new ColorStateList(
+                    new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}}, new int[]{accent, secondary}));
+        }
+        if (view instanceof ImageView) ((ImageView) view).setImageTintList(enabledReaderColor(readerTextColor));
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) tintReaderControls(group.getChildAt(i), secondary);
+        }
+    }
+
+    private void updateThemeSwatches(int selected, int secondary) {
+        int accent = readerAccent();
+        float density = getResources().getDisplayMetrics().density;
+        for (int i = 0; i < tabThemeMode.getTabCount(); i++) {
+            TabLayout.Tab tab = tabThemeMode.getTabAt(i);
+            View custom = tab == null ? null : tab.getCustomView();
+            if (custom == null) continue;
+            MaterialCardView swatch = custom.findViewById(R.id.readerThemeSwatch);
+            swatch.setCardBackgroundColor(readerBackground(i));
+            swatch.setStrokeColor(i == selected ? accent
+                    : ColorUtils.blendARGB(readerBackgroundColor, readerTextColor, 0.2f));
+            swatch.setStrokeWidth(Math.round((i == selected ? 2 : 1) * density));
+            ((TextView) custom.findViewById(R.id.readerThemeSample)).setTextColor(readerForeground(i));
+            ((TextView) custom.findViewById(R.id.readerThemeName)).setTextColor(i == selected ? accent : secondary);
+        }
     }
 
     private int getThemeColor(int attr) {
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(attr, typedValue, true);
         return typedValue.data;
+    }
+
+    private void setReaderTextPadding(TextView text, boolean vertical) {
+        int horizontal = readerDp(currentPageMargin);
+        if (vertical) {
+            int bottom = Math.round(readerDp(16) * UserPreferences.getLineSpacing(this));
+            text.setPadding(horizontal, 0, horizontal, bottom);
+        } else {
+            text.setPadding(horizontal, readerDp(24), horizontal, readerDp(24));
+        }
     }
 
     private void calculatePages() {
@@ -1372,6 +1590,7 @@ public class ReaderActivity extends AppCompatActivity {
         
         TextView prototype = LayoutInflater.from(this).inflate(R.layout.item_reader_page, null, false)
                 .findViewById(R.id.pageContentTextView);
+        setReaderTextPadding(prototype, false);
         int viewportWidth = width - viewPager.getPaddingLeft() - viewPager.getPaddingRight();
         int viewportHeight = height - viewPager.getPaddingTop() - viewPager.getPaddingBottom();
         int contentWidth = viewportWidth - prototype.getCompoundPaddingLeft() - prototype.getCompoundPaddingRight();
@@ -1497,116 +1716,172 @@ public class ReaderActivity extends AppCompatActivity {
         return currentFontSize * 1.25f;
     }
 
-    private void animateButtonColor(TextView tv, int fromColor, int toColor) {
-        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), fromColor, toColor);
-        colorAnimation.setDuration(250);
-        colorAnimation.addUpdateListener(animator -> {
-            int color = (int) animator.getAnimatedValue();
-            tv.setTextColor(color);
-            tv.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(color));
-        });
-        colorAnimation.start();
+    private void updateBottomMenuButtons() {
+        int accent = readerAccent();
+        int normal = ColorUtils.blendARGB(readerBackgroundColor, readerTextColor, 0.75f);
+        for (View button : new View[]{btnChapterList, btnSettings, btnReaderTheme, findViewById(R.id.btnReaderComments)}) {
+            boolean selected = button == btnChapterList && chapterListPanel.getVisibility() == View.VISIBLE
+                    || button == btnSettings && settingsPanel.getVisibility() == View.VISIBLE;
+            TextView text = (TextView) button;
+            ColorStateList colors = enabledReaderColor(selected ? accent : normal);
+            text.setTextColor(colors);
+            text.setCompoundDrawableTintList(colors);
+            text.setSelected(selected);
+        }
     }
 
-    private void updateBottomMenuButtons() {
-        int primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary);
-        int normalColor = getThemeColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
+    private void updateReaderMenu() {
+        if (tvReaderMenuTitle == null) return;
+        CharSequence workTitle = workData != null && workData.getTopicInfo() != null
+                ? workData.getTopicInfo().getTitle() : chapterTitle;
+        if (!TextUtils.equals(topToolbar.getTitle(), workTitle)) topToolbar.setTitle(workTitle);
+        if (!isMenuVisible) return;
+        boolean catalog = chapterListPanel.getVisibility() == View.VISIBLE;
+        boolean settings = settingsPanel.getVisibility() == View.VISIBLE;
+        CharSequence title = settings ? getString(R.string.reader_settings)
+                : catalog ? getString(R.string.reader_catalog_count, filteredChapterList.size())
+                : TextUtils.isEmpty(chapterTitle) ? getString(R.string.work_read_label) : chapterTitle;
+        tvReaderMenuTitle.setText(title);
+        tvReaderMenuSubtitle.setVisibility(settings ? View.GONE : View.VISIBLE);
+        if (!isScrubbingProgress) {
+            tvReaderMenuSubtitle.setText(catalog ? getString(R.string.reader_current_chapter, chapterTitle)
+                    : getString(R.string.reader_chapter_progress_value, currentProgress * 100));
+            sliderReaderProgress.setValue((float) (clamp01(currentProgress) * 1000));
+        }
+        sliderReaderProgress.setEnabled(contentReady && !isLoadingChapter);
+        findViewById(R.id.btnPreviousChapter).setEnabled(contentReady && !isLoadingChapter && getPrevChapterId() >= 0);
+        View next = findViewById(R.id.btnNextChapter);
+        next.setEnabled(contentReady && !isLoadingChapter && !nextChoices().isEmpty());
+        int nextLabel = nextChoices().size() > 1 ? R.string.reader_choose_branch : R.string.reader_next_chapter;
+        next.setContentDescription(getString(nextLabel));
+        next.setTooltipText(getString(nextLabel));
+        findViewById(R.id.btnReaderComments).setEnabled(contentReady && !isLoadingChapter);
+        boolean hasCurrentChapter = false;
+        for (ChapterMenuItem item : filteredChapterList) {
+            if (item.getId() == currentTopicId) { hasCurrentChapter = true; break; }
+        }
+        findViewById(R.id.btnLocateChapter).setEnabled(hasCurrentChapter);
+        rvChapterList.setVisibility(filteredChapterList.isEmpty() ? View.GONE : View.VISIBLE);
+        findViewById(R.id.readerCatalogEmpty).setVisibility(filteredChapterList.isEmpty() ? View.VISIBLE : View.GONE);
+        if (chapterListAdapter != null && chapterListAdapter.highlightedChapterId != currentTopicId) {
+            chapterListAdapter.highlightedChapterId = currentTopicId;
+            chapterListAdapter.notifyDataSetChanged();
+        }
+    }
 
-        if (btnChapterList instanceof TextView) {
-            TextView tv = (TextView) btnChapterList;
-            int targetColor = (chapterListPanel.getVisibility() == View.VISIBLE) ? primaryColor : normalColor;
-            int currentColor = tv.getCurrentTextColor();
-            if (currentColor != targetColor) {
-                animateButtonColor(tv, currentColor, targetColor);
+    private void updateReaderPanelHeight() {
+        if (menuOverlay.getHeight() <= 0) return;
+        ViewGroup.MarginLayoutParams margins = (ViewGroup.MarginLayoutParams) bottomSheetContainer.getLayoutParams();
+        int headerHeight = findViewById(R.id.readerPanelHeader).getHeight();
+        int reserved = Math.max(readerDp(48), headerHeight) + Math.max(readerDp(60), bottomMenu.getHeight()) + readerDp(16);
+        int available = menuOverlay.getHeight() - topToolbar.getBottom() - margins.bottomMargin - readerDp(12);
+        int height = Math.max(readerDp(48), Math.min(readerDp(400), available - reserved));
+        for (View panel : new View[]{settingsPanel, chapterListPanel}) {
+            ViewGroup.LayoutParams params = panel.getLayoutParams();
+            if (params.height != height) {
+                params.height = height;
+                panel.setLayoutParams(params);
             }
         }
+        findViewById(R.id.btnLocateChapter).setVisibility(height < readerDp(140) ? View.GONE : View.VISIBLE);
+    }
 
-        if (btnSettings instanceof TextView) {
-            TextView tv = (TextView) btnSettings;
-            int targetColor = (settingsPanel.getVisibility() == View.VISIBLE) ? primaryColor : normalColor;
-            int currentColor = tv.getCurrentTextColor();
-            if (currentColor != targetColor) {
-                animateButtonColor(tv, currentColor, targetColor);
-            }
-        }
+    private int readerDp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void toggleSettingsPanel() {
-        if (chapterListPanel.getVisibility() == View.VISIBLE) {
-            chapterListPanel.setVisibility(View.GONE);
-        }
+        switchReaderPanel(settingsPanel.getVisibility() == View.VISIBLE ? readerNavigationPanel : settingsPanel);
+    }
 
-        if (settingsPanel.getVisibility() == View.VISIBLE) {
-            TransitionManager.beginDelayedTransition(bottomSheetContainer);
-            settingsPanel.setVisibility(View.GONE);
-        } else {
-            TransitionManager.beginDelayedTransition(bottomSheetContainer);
-            settingsPanel.setVisibility(View.VISIBLE);
+    private void switchReaderPanel(View target) {
+        View current = settingsPanel.getVisibility() == View.VISIBLE ? settingsPanel
+                : chapterListPanel.getVisibility() == View.VISIBLE ? chapterListPanel : readerNavigationPanel;
+        if (current == target) return;
+        FastOutSlowInInterpolator easing = new FastOutSlowInInterpolator();
+        if (isMenuVisible && ViewCompat.isLaidOut(menuOverlay)) {
+            boolean returning = target == readerNavigationPanel;
+            int axis = current == readerNavigationPanel || returning ? MaterialSharedAxis.Y : MaterialSharedAxis.X;
+            boolean forward = current == readerNavigationPanel || current == chapterListPanel && !returning;
+            MaterialSharedAxis content = new MaterialSharedAxis(axis, forward);
+            content.addTarget(readerNavigationPanel).addTarget(chapterListPanel).addTarget(settingsPanel);
+            ChangeBounds bounds = new ChangeBounds();
+            // Include the card itself so its background grows with the content; keep the actions anchored below it.
+            bounds.addTarget(bottomSheetContainer).addTarget(findViewById(R.id.readerPanelHeader)).addTarget(bottomMenu);
+            TransitionSet transition = new TransitionSet().setOrdering(TransitionSet.ORDERING_TOGETHER)
+                    .addTransition(bounds).addTransition(content)
+                    .addTransition(new Fade().addTarget(tvReaderMenuSubtitle));
+            transition.setDuration(240);
+            transition.setInterpolator(easing);
+            TransitionManager.beginDelayedTransition((ViewGroup) menuOverlay, transition);
         }
+        settingsPanel.setVisibility(target == settingsPanel ? View.VISIBLE : View.GONE);
+        chapterListPanel.setVisibility(target == chapterListPanel ? View.VISIBLE : View.GONE);
+        readerNavigationPanel.setVisibility(target == readerNavigationPanel ? View.VISIBLE : View.GONE);
+        updateReaderMenu();
+        updateReaderPanelHeight();
         updateBottomMenuButtons();
+        // Keep the page legible while previewing typography and colors.
+        dimLayer.animate().alpha(target == settingsPanel ? 0.25f : 1f).setDuration(240).setInterpolator(easing).start();
+        if (target == chapterListPanel) locateCurrentChapter();
+    }
+
+    private void locateCurrentChapter() {
+        rvChapterList.post(() -> {
+            LinearLayoutManager manager = (LinearLayoutManager) rvChapterList.getLayoutManager();
+            if (manager == null) return;
+            for (int i = 0; i < filteredChapterList.size(); i++) {
+                if (filteredChapterList.get(i).getId() == currentTopicId) {
+                    manager.scrollToPositionWithOffset(i, rvChapterList.getHeight() / 3);
+                    return;
+                }
+            }
+        });
     }
 
     private void toggleChapterList() {
-        if (settingsPanel.getVisibility() == View.VISIBLE) {
-            settingsPanel.setVisibility(View.GONE);
-        }
-
-        if (chapterListPanel.getVisibility() == View.VISIBLE) {
-            TransitionManager.beginDelayedTransition(bottomSheetContainer);
-            chapterListPanel.setVisibility(View.GONE);
-        } else {
-            TransitionManager.beginDelayedTransition(bottomSheetContainer);
-            chapterListPanel.setVisibility(View.VISIBLE);
-            if (!filteredChapterList.isEmpty()) {
-                int currentIndex = -1;
-                for (int i = 0; i < filteredChapterList.size(); i++) {
-                    if (filteredChapterList.get(i).getId() == currentTopicId) {
-                        currentIndex = i;
-                        break;
-                    }
-                }
-                if (currentIndex != -1) {
-                    int finalIndex = currentIndex;
-                    rvChapterList.post(() -> {
-                        LinearLayoutManager layoutManager = (LinearLayoutManager) rvChapterList.getLayoutManager();
-                        if (layoutManager != null) {
-                            layoutManager.scrollToPositionWithOffset(finalIndex, 0);
-                        }
-                    });
-                }
-            }
-        }
-        updateBottomMenuButtons();
+        switchReaderPanel(chapterListPanel.getVisibility() == View.VISIBLE ? readerNavigationPanel : chapterListPanel);
     }
 
     private void showMenu() {
-        menuOverlay.setVisibility(View.VISIBLE);
-        dimLayer.setClickable(true);
-        dimLayer.animate().alpha(1f).setDuration(300).start();
-        
-        showSystemUI();
-        
-        topToolbar.animate().translationY(0).setDuration(300).start();
-        bottomSheetContainer.animate().translationY(0).setDuration(300).start();
-        
+        TransitionManager.endTransitions((ViewGroup) menuOverlay);
+        topToolbar.animate().cancel();
+        bottomSheetContainer.animate().cancel();
+        dimLayer.animate().cancel();
+        recyclerView.stopScroll();
         isMenuVisible = true;
+        menuOverlay.setVisibility(View.VISIBLE);
+        findViewById(R.id.readerContent).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        dimLayer.setClickable(true);
+        updateReaderMenu();
+        updateReaderPanelHeight();
+        updateBottomMenuButtons();
+        dimLayer.animate().alpha(settingsPanel.getVisibility() == View.VISIBLE ? 0.25f : 1f).setDuration(220).start();
+        showSystemUI();
+        topToolbar.animate().translationY(0).setDuration(220).start();
+        bottomSheetContainer.animate().translationY(0).setDuration(220).withEndAction(null).start();
     }
 
     private void hideMenu() {
-        dimLayer.setClickable(false);
-        dimLayer.animate().alpha(0f).setDuration(300).start();
-        
-        topToolbar.animate().translationY(-topToolbar.getBottom()).setDuration(300).start();
-        
-        bottomSheetContainer.animate().translationY(menuOverlay.getHeight() - bottomSheetContainer.getTop()).setDuration(300)
+        if (!isMenuVisible) return;
+        TransitionManager.endTransitions((ViewGroup) menuOverlay);
+        isMenuVisible = false;
+        topToolbar.animate().cancel();
+        bottomSheetContainer.animate().cancel();
+        dimLayer.animate().alpha(0f).setDuration(220).start();
+        topToolbar.animate().translationY(-topToolbar.getBottom()).setDuration(220).start();
+        bottomSheetContainer.animate().translationY(menuOverlay.getHeight() - bottomSheetContainer.getTop()).setDuration(220)
                 .withEndAction(() -> {
+                    if (isMenuVisible) return;
+                    menuOverlay.setVisibility(View.INVISIBLE);
+                    dimLayer.setClickable(false);
                     settingsPanel.setVisibility(View.GONE);
                     chapterListPanel.setVisibility(View.GONE);
+                    readerNavigationPanel.setVisibility(View.VISIBLE);
+                    findViewById(R.id.readerContent).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
                     updateBottomMenuButtons();
                     hideSystemUI();
                 }).start();
-        
-        isMenuVisible = false;
     }
 
     static void installWindowInsets(View root) {
@@ -1654,7 +1929,7 @@ public class ReaderActivity extends AppCompatActivity {
     private void showSystemUI() {
         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         controller.show(WindowInsetsCompat.Type.systemBars());
-        controller.setAppearanceLightStatusBars(false);
+        controller.setAppearanceLightStatusBars(!isReaderDark(UserPreferences.getReaderTheme(this)));
     }
 
     private class ReaderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -1678,13 +1953,10 @@ public class ReaderActivity extends AppCompatActivity {
                 View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_reader_loading, parent, false);
                 return new LoadingViewHolder(view);
             } else if (viewType == ReaderPage.TYPE_COMMENT) {
-                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_reader_comment_page, parent, false);
-                if (isVerticalMode) {
-                    ViewGroup.LayoutParams params = view.getLayoutParams();
-                    params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-                    view.setLayoutParams(params);
-                }
-                return new CommentViewHolder(view);
+                FrameLayout container = new FrameLayout(parent.getContext());
+                container.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        isVerticalMode ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT));
+                return new CommentViewHolder(container);
             } else if (viewType == ReaderPage.TYPE_IMAGE) {
                 View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_reader_image, parent, false);
                 
@@ -1712,10 +1984,7 @@ public class ReaderActivity extends AppCompatActivity {
                     textParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
                     textView.setLayoutParams(textParams);
                     
-                    int horizontalPadding = (int) (24 * parent.getContext().getResources().getDisplayMetrics().density);
-                    float lineSpacing = UserPreferences.getLineSpacing(parent.getContext());
-                    int bottomPadding = (int) (16 * lineSpacing * parent.getContext().getResources().getDisplayMetrics().density);
-                    textView.setPadding(horizontalPadding, 0, horizontalPadding, bottomPadding);
+                    setReaderTextPadding(textView, true);
                 }
                 
                 if (viewType == ReaderPage.TYPE_SCROLL_TEXT) {
@@ -1765,19 +2034,10 @@ public class ReaderActivity extends AppCompatActivity {
                 ReaderPagination.configure(textHolder.textView,
                         isChapterTitle ? readerTitleFontSize() : currentFontSize, lineSpacing, isChapterTitle);
 
-                int theme = UserPreferences.getReaderTheme(ReaderActivity.this);
-                if (theme >= 1 && theme <= 3) {
-                    textHolder.textView.setTextColor(Color.BLACK);
-                } else {
-                    textHolder.textView.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnBackground));
-                }
+                textHolder.textView.setTextColor(readerTextColor);
+                setReaderTextPadding(textHolder.textView, isVerticalMode);
 
-                int spacingPx = (int) (16 * lineSpacing * holder.itemView.getContext().getResources().getDisplayMetrics().density);
-                
-                if (isVerticalMode) {
-                    int horizontalPadding = (int) (24 * holder.itemView.getContext().getResources().getDisplayMetrics().density);
-                    textHolder.textView.setPadding(horizontalPadding, 0, horizontalPadding, spacingPx);
-                } else {
+                if (!isVerticalMode) {
                     ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) textHolder.textView.getLayoutParams();
                     lp.bottomMargin = 0;
                     textHolder.textView.setLayoutParams(lp);
@@ -1785,7 +2045,7 @@ public class ReaderActivity extends AppCompatActivity {
 
                 Spanned rendered = page.content instanceof Spanned ? (Spanned) page.content : new SpannedString(page.content);
                 int textWidth = textHolder.textView.getWidth() - textHolder.textView.getPaddingLeft() - textHolder.textView.getPaddingRight();
-                if (textWidth <= 0) textWidth = getResources().getDisplayMetrics().widthPixels - (int) (48 * getResources().getDisplayMetrics().density);
+                if (textWidth <= 0) textWidth = getResources().getDisplayMetrics().widthPixels - readerDp(currentPageMargin * 2);
                 BbCodeText.prepare(rendered, textHolder.textView.getPaint(), textWidth);
                 markwon.setParsedMarkdown(textHolder.textView, rendered);
                 BbCodeText.bindWidth(textHolder.textView);
@@ -1813,13 +2073,7 @@ public class ReaderActivity extends AppCompatActivity {
             } else if (holder instanceof LoadingViewHolder) {
                 LoadingViewHolder loadingHolder = (LoadingViewHolder) holder;
 
-                int theme = UserPreferences.getReaderTheme(ReaderActivity.this);
-                int textColor;
-                if (theme >= 1 && theme <= 3) {
-                    textColor = Color.BLACK;
-                } else {
-                    textColor = getThemeColor(com.google.android.material.R.attr.colorOnBackground);
-                }
+                int textColor = readerTextColor;
                 loadingHolder.tvLoading.setTextColor(textColor);
                 if (loadingHolder.pbLoading != null) {
                     loadingHolder.pbLoading.setIndicatorColor(textColor);
@@ -1950,9 +2204,23 @@ public class ReaderActivity extends AppCompatActivity {
             View commentsPager;
             View commentsComposer;
             ReaderCommentsPanel commentsPanel;
+            private boolean darkPalette;
             
             CommentViewHolder(View itemView) {
                 super(itemView);
+            }
+
+            private void prepareView() {
+                boolean dark = isReaderDark(UserPreferences.getReaderTheme(ReaderActivity.this));
+                FrameLayout container = (FrameLayout) itemView;
+                if (container.getChildCount() > 0 && darkPalette == dark) return;
+                if (commentsPanel != null) { commentsPanel.close(); commentsPanel = null; }
+                container.removeAllViews();
+                View content = LayoutInflater.from(readerCommentsContext()).inflate(R.layout.item_reader_comment_page, container, false);
+                content.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        isVerticalMode ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT));
+                container.addView(content);
+                darkPalette = dark;
                 commentsHeader = itemView.findViewById(R.id.readerCommentsHeader);
                 commentsButton = itemView.findViewById(R.id.readerCommentsButton);
                 commentsRefresh = itemView.findViewById(R.id.readerCommentsRefreshLayout);
@@ -1966,13 +2234,9 @@ public class ReaderActivity extends AppCompatActivity {
             }
             
             void bind(int chapterId) {
-                int theme = UserPreferences.getReaderTheme(ReaderActivity.this);
-                int textColor;
-                if (theme >= 1 && theme <= 3) {
-                    textColor = Color.BLACK;
-                } else {
-                    textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface);
-                }
+                prepareView();
+                itemView.setBackgroundColor(readerBackgroundColor);
+                int textColor = readerTextColor;
 
                 if (isVerticalMode) {
                     if (commentsPanel != null) { commentsPanel.close(); commentsPanel = null; }
@@ -2101,86 +2365,55 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private class ChapterListAdapter extends RecyclerView.Adapter<ChapterListAdapter.ViewHolder> {
-        private List<ChapterMenuItem> displayList = new ArrayList<>();
-        private boolean isReaderContent;
-
-        public ChapterListAdapter() {
-            this.isReaderContent = false;
-        }
-
-        public ChapterListAdapter(boolean isReaderContent) {
-            this.isReaderContent = isReaderContent;
-        }
+        private final List<ChapterMenuItem> displayList = new ArrayList<>();
+        private int highlightedChapterId = -1;
 
         public void updateData(List<ChapterMenuItem> newData) {
             displayList.clear();
-            if (newData != null) {
-                displayList.addAll(newData);
-            }
+            if (newData != null) displayList.addAll(newData);
             notifyDataSetChanged();
         }
-        
+
         @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            TextView view = new TextView(parent.getContext());
-            view.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            view.setMinHeight((int) (56 * parent.getContext().getResources().getDisplayMetrics().density));
-            view.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            
-            int paddingHorizontal = (int) (16 * parent.getContext().getResources().getDisplayMetrics().density);
-            int paddingVertical = (int) (12 * parent.getContext().getResources().getDisplayMetrics().density);
-            view.setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical);
-            
-            view.setTextSize(16);
-            
-            TypedValue typedValue = new TypedValue();
-            parent.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, typedValue, true);
-            view.setBackgroundResource(typedValue.resourceId);
-            
+        @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_reader_chapter, parent, false);
             return new ViewHolder(view);
         }
 
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        @Override public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             ChapterMenuItem item = displayList.get(position);
-            holder.textView.setText(item.getTitle());
-            
-            TypedValue typedValue = new TypedValue();
-            if (item.getId() == currentTopicId) {
-                getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true);
-                holder.textView.setTextColor(typedValue.data);
-            } else {
-                if (isReaderContent) {
-                    int theme = UserPreferences.getReaderTheme(ReaderActivity.this);
-                    if (theme >= 1 && theme <= 3) {
-                        holder.textView.setTextColor(Color.BLACK);
-                    } else {
-                        getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnBackground, typedValue, true);
-                        holder.textView.setTextColor(typedValue.data);
-                    }
-                } else {
-                    getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
-                    holder.textView.setTextColor(typedValue.data);
-                }
-            }
-            
-            holder.itemView.setOnClickListener(v -> {
-                jumpToChapter(item.getId());
-                hideMenu();
-            });
+            boolean current = item.getId() == currentTopicId;
+            int accent = readerAccent();
+            int secondary = ColorUtils.blendARGB(readerBackgroundColor, readerTextColor, 0.6f);
+            holder.number.setText(getString(R.string.reader_chapter_number, position + 1));
+            holder.number.setTextColor(current ? accent : secondary);
+            holder.title.setText(item.getTitle());
+            holder.title.setTextColor(current ? accent : readerTextColor);
+            holder.title.setTypeface(Typeface.DEFAULT, current ? Typeface.BOLD : Typeface.NORMAL);
+            holder.current.setVisibility(current ? View.VISIBLE : View.INVISIBLE);
+            holder.current.setImageTintList(ColorStateList.valueOf(accent));
+            holder.itemView.setSelected(current);
+            holder.itemView.setContentDescription(current
+                    ? getString(R.string.reader_current_chapter, item.getTitle()) : item.getTitle());
+            GradientDrawable background = new GradientDrawable();
+            background.setCornerRadius(readerDp(12));
+            background.setColor(current ? ColorUtils.blendARGB(readerBackgroundColor, accent, 0.12f) : readerBackgroundColor);
+            holder.itemView.setBackground(new RippleDrawable(
+                    ColorStateList.valueOf(ColorUtils.setAlphaComponent(readerTextColor, 30)), background, null));
+            holder.itemView.setOnClickListener(v -> jumpToChapter(item.getId()));
         }
 
-        @Override
-        public int getItemCount() {
-            return displayList.size();
-        }
+        @Override public int getItemCount() { return displayList.size(); }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView textView;
-            ViewHolder(TextView itemView) {
+            final TextView number;
+            final TextView title;
+            final ImageView current;
+            ViewHolder(View itemView) {
                 super(itemView);
-                textView = itemView;
+                number = itemView.findViewById(R.id.readerChapterNumber);
+                title = itemView.findViewById(R.id.readerChapterName);
+                current = itemView.findViewById(R.id.readerChapterCurrent);
             }
         }
     }

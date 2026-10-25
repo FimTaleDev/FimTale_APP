@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/menuOverlay"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="invisible">
+
+    <View
+        android:id="@+id/dimLayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/reader_menu_scrim"
+        android:alpha="0"
+        android:importantForAccessibility="no" />
+
+    <com.fimtale.ui.icons.MdiToolbar
+        android:id="@+id/topToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_reader_menu_rounded"
+        android:elevation="4dp"
+        app:mdiNavigationIcon="arrow-left"
+        app:navigationIconTint="?attr/colorOnBackground"
+        app:title="@string/work_read_label"
+        app:titleTextAppearance="?attr/textAppearanceTitleMedium"
+        app:titleTextColor="?attr/colorOnBackground" />
+
+    <LinearLayout
+        android:id="@+id/bottomSheetContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_reader_menu_rounded"
+        android:elevation="8dp"
+        android:clickable="true"
+        android:focusable="false"
+        android:orientation="vertical"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
+
+        <LinearLayout
+            android:id="@+id/readerPanelHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvReaderMenuTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:accessibilityHeading="true"
+                    android:textColor="?attr/colorOnBackground" />
+
+                <TextView
+                    android:id="@+id/tvReaderMenuSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+
+            <com.fimtale.ui.icons.MdiImageView
+                android:id="@+id/btnCloseReaderMenu"
+                style="@style/Widget.Fimtale.Reader.IconButton"
+                android:contentDescription="@string/reader_close_menu"
+                app:mdiIcon="chevron-down" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/readerNavigationPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.fimtale.ui.icons.MdiImageView
+                android:id="@+id/btnPreviousChapter"
+                style="@style/Widget.Fimtale.Reader.IconButton"
+                android:contentDescription="@string/reader_previous_chapter"
+                android:tooltipText="@string/reader_previous_chapter"
+                app:mdiIcon="skip-previous" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderReaderProgress"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:contentDescription="@string/reader_chapter_progress"
+                android:valueFrom="0"
+                android:valueTo="1000"
+                android:value="0"
+                app:labelBehavior="gone" />
+
+            <com.fimtale.ui.icons.MdiImageView
+                android:id="@+id/btnNextChapter"
+                style="@style/Widget.Fimtale.Reader.IconButton"
+                android:contentDescription="@string/reader_next_chapter"
+                android:tooltipText="@string/reader_next_chapter"
+                app:mdiIcon="skip-next" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/chapterListPanel"
+            android:layout_width="match_parent"
+            android:layout_height="320dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <com.fimtale.ui.icons.MdiTextView
+                android:id="@+id/btnLocateChapter"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"
+                android:gravity="center"
+                android:paddingHorizontal="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:drawablePadding="6dp"
+                android:text="@string/reader_locate_chapter"
+                android:textSize="12sp"
+                app:mdiDrawableStart="crosshairs-gps" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvChapterList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:paddingHorizontal="8dp"
+                android:paddingBottom="8dp"
+                android:clipToPadding="false"
+                android:scrollbars="vertical" />
+
+            <TextView
+                android:id="@+id/readerCatalogEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="@string/reader_no_chapters"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/settingsPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fillViewport="false"
+            android:overScrollMode="ifContentScrolls"
+            android:scrollbars="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView style="@style/Widget.Fimtale.Reader.SettingLabel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/reader_brightness" />
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/checkSystemBrightness"
+                        android:layout_width="wrap_content" android:layout_height="48dp"
+                        android:paddingEnd="0dp" android:minWidth="0dp"
+                        android:text="@string/reader_follow_system_brightness"
+                        android:textSize="12sp" app:useMaterialThemeColors="false" />
+                </LinearLayout>
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderBrightness"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:valueFrom="0.01" android:valueTo="1.0" android:value="0.5"
+                    android:contentDescription="@string/reader_screen_brightness" />
+
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView style="@style/Widget.Fimtale.Reader.SettingLabel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/reader_text_size" />
+                    <TextView android:id="@+id/tvFontSizeValue" style="@style/Widget.Fimtale.Reader.SettingValue"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                </LinearLayout>
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderFontSize"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:valueFrom="12" android:valueTo="40" android:stepSize="2" android:value="20"
+                    android:contentDescription="@string/reader_text_size" />
+
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView style="@style/Widget.Fimtale.Reader.SettingLabel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="@string/reader_line_spacing" />
+                    <TextView android:id="@+id/tvLineSpacingValue" style="@style/Widget.Fimtale.Reader.SettingValue"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                </LinearLayout>
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderLineSpacing"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:valueFrom="1.0" android:valueTo="3.0" android:stepSize="0.2" android:value="1.4"
+                    android:contentDescription="@string/reader_line_spacing" />
+
+                <TextView style="@style/Widget.Fimtale.Reader.SettingLabel"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:text="@string/reader_page_margin" />
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/tabPageMargin" style="@style/Widget.Fimtale.Reader.Tabs"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:contentDescription="@string/reader_page_margin">
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_margin_compact" />
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_margin_normal" />
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_margin_relaxed" />
+                </com.google.android.material.tabs.TabLayout>
+
+                <TextView style="@style/Widget.Fimtale.Reader.SettingLabel"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp" android:text="@string/reader_theme" />
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/tabThemeMode" style="@style/Widget.Fimtale.Reader.Tabs"
+                    android:layout_width="match_parent" android:layout_height="80dp"
+                    android:layout_marginTop="8dp" app:tabIndicatorHeight="0dp"
+                    android:contentDescription="@string/reader_theme">
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/common_default" />
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_theme_paper" />
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_theme_matcha" />
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_theme_ocean" />
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_theme_night" />
+                </com.google.android.material.tabs.TabLayout>
+
+                <TextView style="@style/Widget.Fimtale.Reader.SettingLabel"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp" android:text="@string/reader_pagination" />
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/tabPageMode" style="@style/Widget.Fimtale.Reader.Tabs"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:contentDescription="@string/reader_pagination">
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_paged_mode" />
+                    <com.google.android.material.tabs.TabItem android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/reader_scroll_mode" />
+                </com.google.android.material.tabs.TabLayout>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <LinearLayout
+            android:id="@+id/bottomMenu"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal" android:paddingHorizontal="8dp">
+            <com.fimtale.ui.icons.MdiTextView android:id="@+id/btnChapterList"
+                style="@style/Widget.Fimtale.Reader.MenuAction"
+                android:text="@string/reader_catalog" app:mdiDrawableTop="format-list-bulleted" />
+            <com.fimtale.ui.icons.MdiTextView android:id="@+id/btnReaderComments"
+                style="@style/Widget.Fimtale.Reader.MenuAction"
+                android:text="@string/reader_comments" app:mdiDrawableTop="comment-text-outline" />
+            <com.fimtale.ui.icons.MdiTextView android:id="@+id/btnReaderTheme"
+                style="@style/Widget.Fimtale.Reader.MenuAction"
+                android:text="@string/reader_theme_night" app:mdiDrawableTop="weather-night" />
+            <com.fimtale.ui.icons.MdiTextView android:id="@+id/btnSettings"
+                style="@style/Widget.Fimtale.Reader.MenuAction"
+                android:text="@string/reader_typography" app:mdiDrawableTop="format-font" />
+        </LinearLayout>
+    </LinearLayout>
+</RelativeLayout>
