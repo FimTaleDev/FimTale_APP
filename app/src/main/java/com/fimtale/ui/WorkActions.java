@@ -263,7 +263,7 @@ public final class WorkActions {
     }
 
     private void saveFavorites(List<WorkInteractions.Change> changes, int index, String token) {
-        if (index >= changes.size()) { refresh(); return; }
+        if (index >= changes.size()) { com.fimtale.community.Community.changed(); refresh(); return; }
         if (!token.equals(UserPreferences.getToken(activity))) { onResume(); return; }
         WorkInteractions.Change change = changes.get(index);
         WorkInteractions.FavoriteRequest request = new WorkInteractions.FavoriteRequest(workId, change.folderId);
@@ -273,7 +273,7 @@ public final class WorkActions {
         call.enqueue(new Callback<Void>() {
             @Override public void onResponse(Call<Void> call, Response<Void> response) {
                 if (!valid(call, token)) return;
-                if (response.isSuccessful()) saveFavorites(changes, index + 1, token);
+                if (response.isSuccessful()) { com.fimtale.community.Community.changed(); saveFavorites(changes, index + 1, token); }
                 else {
                     Toast.makeText(activity, ApiErrors.message(response), Toast.LENGTH_LONG).show();
                     refresh();
@@ -282,6 +282,7 @@ public final class WorkActions {
             @Override public void onFailure(Call<Void> call, Throwable error) {
                 if (!valid(call, token)) return;
                 Toast.makeText(activity, activity.getString(R.string.work_favorites_uncertain), Toast.LENGTH_LONG).show();
+                com.fimtale.community.Community.changed();
                 refresh();
             }
         });

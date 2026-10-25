@@ -55,7 +55,7 @@ public class ReportViewModel extends AndroidViewModel {
         if (ReportRequest.trim(content()).isEmpty()) {
             contentError = getApplication().getString(R.string.report_content_required); changed(); return;
         }
-        if ((targetType != ReportRequest.WORK && targetType != ReportRequest.USER) || targetId <= 0) {
+        if ((targetType != ReportRequest.WORK && targetType != ReportRequest.COMMENT && targetType != ReportRequest.USER) || targetId <= 0) {
             error = getApplication().getString(R.string.report_invalid_target); changed(); return;
         }
         submitting = true; error = ""; contentError = ""; saved.set("pending", true); changed();

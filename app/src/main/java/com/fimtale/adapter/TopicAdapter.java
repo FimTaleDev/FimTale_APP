@@ -30,10 +30,22 @@ import android.content.res.ColorStateList;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import com.fimtale.ui.ButtonLoadingIcon;
+import com.google.android.material.button.MaterialButton;
 
 public class TopicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private List<TopicViewItem> topics;
+    private java.util.function.IntConsumer favoriteManager;
+    private java.util.function.IntPredicate favoriteLoading = id -> false;
+    private java.util.function.BooleanSupplier favoriteEnabled = () -> true;
+    private final Set<ButtonLoadingIcon> loadingIcons = new HashSet<>();
+    public void setFavoriteManager(java.util.function.IntConsumer manager, java.util.function.IntPredicate loading,
+                                   java.util.function.BooleanSupplier enabled) {
+        favoriteManager = manager; favoriteLoading = loading; favoriteEnabled = enabled;
+    }
 
     public TopicAdapter(List<TopicViewItem> topics) {
         this.topics = topics;
@@ -44,7 +56,7 @@ public class TopicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.grid_item_topic, parent, false);
-        return new TopicViewHolder(view);
+        TopicViewHolder holder = new TopicViewHolder(view); loadingIcons.add(holder.loading); return holder;
     }
 
     @Override
@@ -52,6 +64,7 @@ public class TopicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         if (holder instanceof TopicViewHolder) {
             TopicViewHolder topicHolder = (TopicViewHolder) holder;
             TopicViewItem topic = topics.get(position);
+            bindFavorite(topicHolder, topic.getId());
             Tags tags = topic.getTags();
             topicHolder.titleTextView.setText(topic.getTitle());
             topicHolder.authorTextView.setText(topic.getAuthorName());
@@ -157,9 +170,29 @@ public class TopicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         if (topics == null) return 0;
         return topics.size();
     }
+    private void bindFavorite(TopicViewHolder holder, int id) {
+        if (holder.manageFavorite == null) return;
+        holder.manageFavorite.setVisibility(favoriteManager == null ? View.GONE : View.VISIBLE);
+        if (favoriteManager == null) { holder.loading.stop(); return; }
+        holder.manageFavorite.setEnabled(favoriteEnabled.getAsBoolean());
+        holder.loading.bind(holder.manageFavorite, "bookmark", favoriteManager != null, favoriteManager != null && favoriteLoading.test(id));
+        holder.manageFavorite.setOnClickListener(v -> { if (favoriteManager != null) favoriteManager.accept(id); });
+    }
+    @Override public void onViewAttachedToWindow(@NonNull RecyclerView.ViewHolder holder) {
+        super.onViewAttachedToWindow(holder); int position = holder.getBindingAdapterPosition();
+        if (holder instanceof TopicViewHolder && position != RecyclerView.NO_POSITION && topics != null && position < topics.size())
+            bindFavorite((TopicViewHolder) holder, topics.get(position).getId());
+    }
+    @Override public void onViewDetachedFromWindow(@NonNull RecyclerView.ViewHolder holder) {
+        if (holder instanceof TopicViewHolder) ((TopicViewHolder) holder).loading.stop(); super.onViewDetachedFromWindow(holder);
+    }
+    @Override public void onDetachedFromRecyclerView(@NonNull RecyclerView recycler) {
+        for (ButtonLoadingIcon icon : loadingIcons) icon.close(); super.onDetachedFromRecyclerView(recycler);
+    }
 
     @Override public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
         if (holder instanceof TopicViewHolder) {
+            ((TopicViewHolder) holder).loading.stop();
             ImageView cover = ((TopicViewHolder) holder).coverImageView;
             Glide.with(holder.itemView.getContext().getApplicationContext()).clear(cover);
             if (cover instanceof ParallaxImageView) ((ParallaxImageView) cover).setParallaxEnabled(false);
@@ -221,9 +254,12 @@ public class TopicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         TextView favoriteCountTextView;
         TextView tagType, tagSource, tagLength, tagRate;
         ChipGroup tagChipGroup;
+        final MaterialButton manageFavorite;
+        final ButtonLoadingIcon loading = new ButtonLoadingIcon();
 
         public TopicViewHolder(@NonNull View itemView) {
             super(itemView);
+            manageFavorite = itemView.findViewById(R.id.topicManageFavorite);
             coverImageView = itemView.findViewById(R.id.coverImageView);
             titleTextView = itemView.findViewById(R.id.titleTextView);
             authorTextView = itemView.findViewById(R.id.authorTextView);

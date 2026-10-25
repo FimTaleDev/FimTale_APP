@@ -1182,7 +1182,10 @@ public class ReaderActivity extends AppCompatActivity {
         readerCommentsSheet = new BottomSheetDialog(commentsContext);
         readerCommentsSheet.setContentView(content);
         readerCommentsSheetPanel = new ReaderCommentsPanel(this, content, rootTopicId);
+        readerCommentsSheetPanel.setWorkAuthor(workData == null || workData.getAuthorInfo() == null ? 0 : workData.getAuthorInfo().getId());
         readerCommentsSheetPanel.bind(chapterId);
+        if (readerCommentsSheet.getWindow() != null)
+            readerCommentsSheet.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         readerCommentsSheet.setOnDismissListener(dialog -> {
             if (readerCommentsSheetPanel != null) {
                 readerCommentsSheetPanel.close();
@@ -1913,6 +1916,9 @@ public class ReaderActivity extends AppCompatActivity {
                     insets.bottom + Math.round(8 * density));
             int bodyTop = insets.top + Math.round(50 * density);
             int bodyBottom = insets.bottom + Math.round(30 * density);
+            View focus = root.findFocus();
+            if (focus != null && focus.getId() == R.id.readerCommentComposerInput)
+                bodyBottom = Math.max(bodyBottom, windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom);
             pager.setPadding(insets.left, bodyTop, insets.right, bodyBottom);
             scroller.setPadding(insets.left, bodyTop, insets.right, bodyBottom);
             return windowInsets;
@@ -2259,6 +2265,7 @@ public class ReaderActivity extends AppCompatActivity {
                     tvChapterTitle.setTextColor(textColor);
                     if (commentsPanel != null) commentsPanel.close();
                     commentsPanel = new ReaderCommentsPanel(ReaderActivity.this, itemView, rootTopicId);
+                    commentsPanel.setWorkAuthor(workData == null || workData.getAuthorInfo() == null ? 0 : workData.getAuthorInfo().getId());
                     commentsPanel.bind(chapterId);
                 }
 

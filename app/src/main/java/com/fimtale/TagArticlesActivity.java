@@ -50,7 +50,6 @@ public class TagArticlesActivity extends AppCompatActivity {
     private LoadingCardAdapter loadingFooter;
     private TextView loadingStatus;
     private Call<TopicListResponse> topicsCall;
-    private Call<TagInfo> tagInfoCall;
     private TopicAdapter topicAdapter;
     private List<TopicViewItem> topicViewItemList = new ArrayList<>();
     
@@ -61,6 +60,9 @@ public class TagArticlesActivity extends AppCompatActivity {
     private String currentSortBy = "";
     private TagInfo tagInfo;
     private MenuItem tagInfoMenuItem;
+    private MenuItem followTagMenuItem;
+    private com.fimtale.community.TagFollowModel tagFollow;
+    private com.fimtale.ui.MenuActionButton followAction;
 
     private boolean isToolbarElevated = false;
     private ObjectAnimator elevationAnimator;
@@ -82,7 +84,13 @@ public class TagArticlesActivity extends AppCompatActivity {
             return;
         }
 
+        tagFollow = new androidx.lifecycle.ViewModelProvider(this).get(com.fimtale.community.TagFollowModel.class);
+
         setupViews();
+        tagFollow.changes.observe(this, ignored -> {
+            tagInfo = tagFollow.info; updateTagInfoMenuItemVisibility();
+            if (!tagFollow.error.isEmpty()) { Toast.makeText(this, tagFollow.error, Toast.LENGTH_LONG).show(); tagFollow.error = ""; }
+        });
         fetchTagTopics(1);
     }
 
@@ -158,11 +166,23 @@ public class TagArticlesActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         MdiIcons.inflateMenu(this, getMenuInflater(), R.menu.menu_tag_articles, menu);
         tagInfoMenuItem = menu.findItem(R.id.action_tag_info);
+        followTagMenuItem = menu.findItem(R.id.action_follow_tag);
+        if (followAction != null) followAction.close();
+        followAction = new com.fimtale.ui.MenuActionButton(this, followTagMenuItem, this::onOptionsItemSelected);
         updateTagInfoMenuItemVisibility();
         return true;
     }
 
     private void updateTagInfoMenuItemVisibility() {
+        if (followTagMenuItem != null) {
+            followTagMenuItem.setVisible(workType == 0 && tagInfo != null);
+            followTagMenuItem.setEnabled(tagFollow != null && !tagFollow.busy && !tagFollow.loading);
+            if (tagInfo != null) followTagMenuItem.setTitle(getString(R.string.community_tag_follow_count,
+                    getString(tagInfo.faved ? R.string.community_unfollow_tag : R.string.community_follow_tag), tagInfo.count_fav));
+            if (followAction != null) followAction.bind(tagInfo != null && tagInfo.faved ? "heart" : "heart-outline",
+                    tagInfo != null && tagInfo.faved, tagFollow != null && (tagFollow.busy || tagFollow.loading), tagInfo != null);
+            if (followAction != null && tagInfo != null) followAction.setCount(tagInfo.count_fav);
+        }
         if (tagInfoMenuItem != null) {
             tagInfoMenuItem.setVisible(tagInfo != null && tagInfo.getIntro() != null && !tagInfo.getIntro().isEmpty());
         }
@@ -170,6 +190,11 @@ public class TagArticlesActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_follow_tag) {
+            if (com.fimtale.utils.UserPreferences.isLoggedIn(this)) tagFollow.toggle(tagName);
+            else startActivity(new android.content.Intent(this, LoginActivity.class));
+            return true;
+        }
         if (item.getItemId() == R.id.action_tag_info) {
             showTagInfoDialog();
             return true;
@@ -225,19 +250,7 @@ public class TagArticlesActivity extends AppCompatActivity {
         if (topicsCall != null) topicsCall.cancel();
         isLoading = true;
         if (page == 1 && workType == 0 && tagInfo == null) {
-            if (tagInfoCall != null) tagInfoCall.cancel();
-            tagInfoCall = RetrofitClient.getInstance().getTag(tagName);
-            tagInfoCall.enqueue(new Callback<TagInfo>() {
-                @Override public void onResponse(Call<TagInfo> call, Response<TagInfo> response) {
-                    if (isFinishing() || isDestroyed() || call.isCanceled() || call != tagInfoCall) return;
-                    if (response.isSuccessful() && response.body() != null) { tagInfo = response.body(); updateTagInfoMenuItemVisibility(); }
-                    else pageError.show(getString(R.string.tags_details_failed), () -> fetchTagTopics(1), topicAdapter.getItemCount() > 0);
-                }
-                @Override public void onFailure(Call<TagInfo> call, Throwable t) {
-                    if (isFinishing() || isDestroyed() || call.isCanceled() || call != tagInfoCall) return;
-                    pageError.show(getString(R.string.tags_details_failed), () -> fetchTagTopics(1), topicAdapter.getItemCount() > 0);
-                }
-            });
+            tagFollow.load(tagName);
         }
         loadingStatus.setVisibility(View.GONE);
         boolean replacing = page == 1 && !com.fimtale.ui.PullToRefresh.isRefreshing(recyclerView);
@@ -291,9 +304,12 @@ public class TagArticlesActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
+        if (followAction != null) followAction.close();
         if (topicsCall != null) { topicsCall.cancel(); topicsCall = null; }
-        if (tagInfoCall != null) { tagInfoCall.cancel(); tagInfoCall = null; }
         if (elevationAnimator != null) elevationAnimator.cancel();
         super.onDestroy();
+    }
+    @Override protected void onResume() {
+        super.onResume(); if (tagFollow != null && workType == 0) tagFollow.resume(tagName);
     }
 }

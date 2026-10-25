@@ -72,6 +72,9 @@ public class ContentFiltersActivity extends AppCompatActivity {
     private Call<ContentFilterDef> defaultCall;
     private Call<UserMaterial> saveCall;
     private Call<List<BlockedUser>> blockCall;
+    private int changingBlockedUser;
+    private final java.util.Map<Integer, MaterialButton> blockButtons = new java.util.LinkedHashMap<>();
+    private final com.fimtale.ui.ButtonLoadingIcon blockLoading = new com.fimtale.ui.ButtonLoadingIcon();
     private ValueAnimator headerAnimator;
     private boolean headerRaised;
     private boolean closed;
@@ -154,6 +157,7 @@ public class ContentFiltersActivity extends AppCompatActivity {
         if (defaultCall != null) defaultCall.cancel();
         if (blockCall != null) blockCall.cancel();
         defaultCall = null; blockCall = null;
+        finishBlockLoading();
         setLoading(true);
         String token = UserPreferences.getToken(this);
         userCall = RetrofitClient.getInstance().getCurrentUser(token);
@@ -201,11 +205,11 @@ public class ContentFiltersActivity extends AppCompatActivity {
         blockCall.enqueue(new Callback<List<BlockedUser>>() {
             @Override public void onResponse(@NonNull Call<List<BlockedUser>> call, @NonNull Response<List<BlockedUser>> response) {
                 if (!valid(call, blockCall)) return;
-                blockCall = null; setLoading(false); if (response.isSuccessful()) { blockedUsers = response.body() == null ? new ArrayList<>() : response.body(); renderBlocked(); }
+                blockCall = null; finishBlockLoading(); setLoading(false); if (response.isSuccessful()) { blockedUsers = response.body() == null ? new ArrayList<>() : response.body(); renderBlocked(); }
                 else showLoadError(ApiErrors.message(response));
             }
             @Override public void onFailure(@NonNull Call<List<BlockedUser>> call, @NonNull Throwable error) {
-                if (valid(call, blockCall)) { blockCall = null; showLoadError(getString(R.string.filters_blocked_users_load_failed)); }
+                if (valid(call, blockCall)) { blockCall = null; finishBlockLoading(); showLoadError(getString(R.string.filters_blocked_users_load_failed)); }
             }
         });
     }
@@ -324,21 +328,43 @@ public class ContentFiltersActivity extends AppCompatActivity {
     }
     private void deletePreset(NamedContentFilter preset) { List<NamedContentFilter> next = new ArrayList<>(filterPresets); next.remove(preset); saveFilter(activeFilter, next, getString(R.string.filters_preset_deleted)); }
     private void renderBlocked() {
+        blockButtons.clear(); blockLoading.stop();
         blocked.removeAllViews(); blockedEmpty.setVisibility(blockedUsers.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
         for (BlockedUser item : blockedUsers) {
             LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
             TextView name = new TextView(this); name.setText(getString(R.string.profile_handle, item.username)); row.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
-            MaterialButton remove = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle); remove.setText(getString(R.string.filters_unblock)); remove.setOnClickListener(v -> toggleBlock(item.userId)); row.addView(remove);
+            MaterialButton remove = new MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle);
+            remove.setText(getString(R.string.filters_unblock)); remove.setIconSize(getResources().getDimensionPixelSize(R.dimen.mdi_icon_size));
+            remove.setEnabled(changingBlockedUser == 0);
+            blockLoading.bind(remove, "account-cancel", true, changingBlockedUser == item.userId);
+            blockButtons.put(item.userId, remove); remove.setOnClickListener(v -> toggleBlock(item.userId)); row.addView(remove);
             blocked.addView(row, new LinearLayout.LayoutParams(-1, -2));
         }
     }
     private void toggleBlock(int userId) {
         if (blockCall != null) return;
         String token = UserPreferences.getToken(this); blockCall = RetrofitClient.getInstance().updateBlocklist(token, new BlockUserRequest(userId));
+        changingBlockedUser = userId;
+        for (MaterialButton button : blockButtons.values()) button.setEnabled(false);
+        MaterialButton button = blockButtons.get(userId); if (button != null) blockLoading.start(button);
         blockCall.enqueue(new Callback<List<BlockedUser>>() {
-            @Override public void onResponse(@NonNull Call<List<BlockedUser>> call, @NonNull Response<List<BlockedUser>> response) { if (!valid(call, blockCall)) return; blockCall = null; if (response.isSuccessful()) { blockedUsers = response.body() == null ? new ArrayList<>() : response.body(); renderBlocked(); } else showError(ApiErrors.message(response)); }
-            @Override public void onFailure(@NonNull Call<List<BlockedUser>> call, @NonNull Throwable error) { if (valid(call, blockCall)) { blockCall = null; showError(getString(R.string.filters_update_blocked_failed)); } }
+            @Override public void onResponse(@NonNull Call<List<BlockedUser>> call, @NonNull Response<List<BlockedUser>> response) {
+                if (!valid(call, blockCall)) return;
+                blockCall = null; finishBlockLoading();
+                if (response.isSuccessful()) {
+                    com.fimtale.community.Community.changed();
+                    blockedUsers = response.body() == null ? new ArrayList<>() : response.body(); renderBlocked();
+                } else showError(ApiErrors.message(response));
+            }
+            @Override public void onFailure(@NonNull Call<List<BlockedUser>> call, @NonNull Throwable error) {
+                if (!valid(call, blockCall)) return;
+                blockCall = null; showError(getString(R.string.filters_update_blocked_failed)); loadBlocked(token);
+            }
         });
+    }
+    private void finishBlockLoading() {
+        blockLoading.stop(); changingBlockedUser = 0;
+        for (MaterialButton button : blockButtons.values()) button.setEnabled(true);
     }
     private boolean valid(Call<?> call, Call<?> current) { return !closed && !isFinishing() && !isDestroyed() && !call.isCanceled() && call == current; }
     private void setLoading(boolean value) {
@@ -363,5 +389,5 @@ public class ContentFiltersActivity extends AppCompatActivity {
     }
     private void showError(String value) { Toast.makeText(this, value, Toast.LENGTH_LONG).show(); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
-    @Override protected void onDestroy() { closed = true; if (userCall != null) userCall.cancel(); if (defaultCall != null) defaultCall.cancel(); if (saveCall != null) saveCall.cancel(); if (blockCall != null) blockCall.cancel(); if (headerAnimator != null) headerAnimator.cancel(); super.onDestroy(); }
+    @Override protected void onDestroy() { closed = true; blockLoading.close(); if (userCall != null) userCall.cancel(); if (defaultCall != null) defaultCall.cancel(); if (saveCall != null) saveCall.cancel(); if (blockCall != null) blockCall.cancel(); if (headerAnimator != null) headerAnimator.cancel(); super.onDestroy(); }
 }

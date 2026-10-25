@@ -95,9 +95,24 @@ public class UserDetailActivity extends AppCompatActivity {
     private int currentUserId;
     private String reportUsername;
     private long editorVersion = com.fimtale.editor.EditorChanges.version();
+    private com.fimtale.community.ProfileSocialModel social;
+    private com.google.android.material.button.MaterialButton followButton, messageButton;
+    private UserDetailResponse profileData;
+    private AlertDialog blockDialog;
+    private final com.fimtale.ui.ButtonLoadingIcon followLoading = new com.fimtale.ui.ButtonLoadingIcon();
+    private final com.fimtale.ui.ButtonLoadingIcon messageLoading = new com.fimtale.ui.ButtonLoadingIcon();
+    private com.fimtale.ui.MenuActionButton moreAction;
+    private String profileSession;
+    private long communityVersion = com.fimtale.community.Community.version();
 
     @Override protected void onResume() {
         super.onResume();
+        if (social != null) social.syncSession();
+        if (currentUsername != null && (!UserPreferences.getToken(this).equals(profileSession)
+                || communityVersion != com.fimtale.community.Community.version())) {
+            communityVersion = com.fimtale.community.Community.version();
+            loadData(currentUsername);
+        }
         if (editorVersion != com.fimtale.editor.EditorChanges.version()) {
             editorVersion = com.fimtale.editor.EditorChanges.version();
             loadUserTopics(currentUsername, 1);
@@ -115,9 +130,18 @@ public class UserDetailActivity extends AppCompatActivity {
             return;
         }
         this.currentUsername = username;
+        social = new androidx.lifecycle.ViewModelProvider(this).get(com.fimtale.community.ProfileSocialModel.class);
+        social.syncSession();
         moreMenu = new com.fimtale.ui.BottomSheetMenu(this, R.menu.user_more_menu, this::onOptionsItemSelected);
 
         initView();
+        social.header.observe(this, data -> { if (data != null && data.getId() > 0) bindData(data); });
+        social.changes.observe(this, ignored -> {
+            updateSocialActions();
+            if (!social.error.isEmpty()) { Toast.makeText(this, social.error, Toast.LENGTH_LONG).show(); social.error = ""; }
+            com.fimtale.notifications.Inbox.Conversation conversation = social.takeConversation();
+            if (conversation != null) startActivity(ConversationActivity.intent(this, conversation));
+        });
         com.fimtale.ui.PullToRefresh.attach(scrollView, () -> {
             loadData(currentUsername);
             loadUserTopics(currentUsername, 1);
@@ -162,6 +186,19 @@ public class UserDetailActivity extends AppCompatActivity {
         topicsStatus = findViewById(R.id.userTopicsStatus);
         rvUserTopics = findViewById(R.id.rvUserTopics);
         tvUserTopicsTitle = findViewById(R.id.tvUserTopicsTitle);
+        followButton = findViewById(R.id.profileFollow); messageButton = findViewById(R.id.profileMessage);
+        followButton.setOnClickListener(v -> { if (socialLogin()) social.follow(currentUserId, currentUsername); });
+        messageButton.setOnClickListener(v -> { if (socialLogin()) social.message(currentUserId); });
+        ((View) tvFollowing.getParent()).setOnClickListener(v -> openUserTab("following"));
+        ((View) tvFollowers.getParent()).setOnClickListener(v -> openUserTab("follower"));
+        ((View) tvTopics.getParent()).setOnClickListener(v -> openUserTab("work"));
+        ChipGroup contentLinks = findViewById(R.id.profileContentLinks);
+        String[] labels = getResources().getStringArray(R.array.community_user_tabs);
+        for (int i = 0; i < labels.length; i++) {
+            Chip link = new Chip(this); link.setText(labels[i]); link.setCheckable(false); link.setClickable(true);
+            String tab = com.fimtale.community.UserContentActivity.TABS[i];
+            link.setOnClickListener(v -> openUserTab(tab)); contentLinks.addView(link);
+        }
 
         rvUserTopics.setLayoutManager(new LinearLayoutManager(this));
         topicAdapter = new TopicAdapter(topicList);
@@ -221,11 +258,14 @@ public class UserDetailActivity extends AppCompatActivity {
         loadingSkeleton.setVisibility(pulling ? View.GONE : View.VISIBLE);
         loadError.setVisibility(View.GONE);
         scrollView.setVisibility(pulling ? View.VISIBLE : View.INVISIBLE);
-        profileCall = RetrofitClient.getInstance().getUserDetail(username);
+        profileSession = UserPreferences.getToken(this);
+        final String token = profileSession;
+        profileCall = RetrofitClient.getInstance().getUserHeader(token, username);
         profileCall.enqueue(new Callback<UserDetailResponse>() {
             @Override
             public void onResponse(Call<UserDetailResponse> call, Response<UserDetailResponse> response) {
                 if (isFinishing() || isDestroyed() || call.isCanceled() || call != profileCall) return;
+                if (!token.equals(UserPreferences.getToken(UserDetailActivity.this))) { loadData(currentUsername); return; }
                 if (response.isSuccessful() && response.body() != null) {
                     UserDetailResponse data = response.body();
                     if (data.getId() > 0) {
@@ -244,6 +284,7 @@ public class UserDetailActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<UserDetailResponse> call, Throwable t) {
                 if (isFinishing() || isDestroyed() || call.isCanceled() || call != profileCall) return;
+                if (!token.equals(UserPreferences.getToken(UserDetailActivity.this))) { loadData(currentUsername); return; }
                 showProfileLoadError();
             }
         });
@@ -251,6 +292,7 @@ public class UserDetailActivity extends AppCompatActivity {
 
     private void finishProfileLoading() {
         profileLoading = false;
+        updateSocialActions();
         if (!isLoading) com.fimtale.ui.PullToRefresh.finish(scrollView);
     }
 
@@ -263,8 +305,11 @@ public class UserDetailActivity extends AppCompatActivity {
     }
 
     private void bindData(UserDetailResponse data) {
+        profileData = data;
         UserDetailResponse info = data;
         currentUserId = info.getId();
+        social.target(currentUserId);
+        updateSocialActions();
         reportUsername = TextUtils.isEmpty(info.getUserName()) ? currentUsername : info.getUserName();
         updateMoreMenu();
         invalidateOptionsMenu();
@@ -439,6 +484,8 @@ public class UserDetailActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
+        followLoading.close(); messageLoading.close(); if (moreAction != null) moreAction.close();
+        if (blockDialog != null) blockDialog.dismiss();
         if (medalPreviewDialog != null) medalPreviewDialog.dismiss();
         if (moreMenu != null) moreMenu.dismiss();
         if (profileCall != null) { profileCall.cancel(); profileCall = null; }
@@ -453,8 +500,33 @@ public class UserDetailActivity extends AppCompatActivity {
         return typedValue.data;
     }
 
+    private void openUserTab(String tab) {
+        if (currentUsername != null) startActivity(com.fimtale.community.UserContentActivity.intent(this, currentUsername, tab));
+    }
+    private boolean socialLogin() {
+        if (currentUserId <= 0) return false;
+        if (UserPreferences.isLoggedIn(this)) return true;
+        startActivity(new android.content.Intent(this, LoginActivity.class)); return false;
+    }
+    private void updateSocialActions() {
+        if (social == null || followButton == null) return;
+        int self = 0;
+        try { self = Integer.parseInt(UserPreferences.getUserId(this)); } catch (RuntimeException ignored) { }
+        findViewById(R.id.profileSocialActions).setVisibility(currentUserId > 0 && self != currentUserId ? View.VISIBLE : View.GONE);
+        boolean followed = profileData != null && profileData.followedBy(self);
+        followButton.setText(followed ? R.string.community_unfollow : R.string.community_follow);
+        followButton.setEnabled(!social.following && !profileLoading);
+        messageButton.setEnabled(!social.messaging);
+        followLoading.bind(followButton, followed ? "account-check" : "account-plus-outline", followed, social.following);
+        messageLoading.bind(messageButton, "message-text-outline", false, social.messaging);
+        updateMoreMenu();
+    }
+
     @Override public boolean onCreateOptionsMenu(Menu menu) {
         MdiIcons.inflateMenu(this, getMenuInflater(), R.menu.menu_user_detail, menu);
+        if (moreAction != null) moreAction.close();
+        moreAction = new com.fimtale.ui.MenuActionButton(this, menu.findItem(R.id.action_more), this::onOptionsItemSelected);
+        updateMoreMenu();
         return true;
     }
 
@@ -466,12 +538,30 @@ public class UserDetailActivity extends AppCompatActivity {
     private void updateMoreMenu() {
         if (moreMenu == null) return;
         moreMenu.getMenu().findItem(R.id.action_report_user).setEnabled(currentUserId > 0);
+        MenuItem blockItem = moreMenu.getMenu().findItem(R.id.action_block_user);
+        boolean self = String.valueOf(currentUserId).equals(UserPreferences.getUserId(this));
+        blockItem.setVisible(currentUserId > 0 && !self);
+        blockItem.setEnabled(social != null && !social.blocking);
+        blockItem.setTitle(social != null && social.blocked ? R.string.filters_unblock : R.string.community_block_user);
+        blockItem.setIcon(MdiIcons.drawable(this, social != null && social.blocked ? "account-cancel" : "account-cancel-outline"));
+        if (moreAction != null) moreAction.bind("dots-vertical", false, social != null && social.blockChanging, true);
         if (moreMenu.isShowing()) moreMenu.refresh();
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_more) { moreMenu.show(); return true; }
+        if (item.getItemId() == R.id.action_block_user) {
+            if (!socialLogin()) return true;
+            if (!social.blockKnown) { social.loadBlocked(); return true; }
+            String token = UserPreferences.getToken(this);
+            String action = getString(social.blocked ? R.string.filters_unblock : R.string.community_block_user);
+            blockDialog = new MaterialAlertDialogBuilder(this).setMessage(getString(R.string.community_block_confirm, action, currentUsername))
+                    .setNegativeButton(R.string.common_cancel, null).setPositiveButton(R.string.common_confirm, (dialog, which) -> {
+                        if (token.equals(UserPreferences.getToken(this))) social.toggleBlock();
+                    }).show();
+            return true;
+        }
         if (item.getItemId() == R.id.action_report_user) {
             com.fimtale.report.ReportDialog.show(this, com.fimtale.report.ReportRequest.USER, currentUserId,
                     getString(R.string.report_user_target, reportUsername));

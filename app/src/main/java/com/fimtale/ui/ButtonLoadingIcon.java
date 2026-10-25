@@ -4,6 +4,7 @@ import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.MainThread;
 import com.fimtale.R;
+import com.fimtale.utils.MdiIcons;
 import com.google.android.material.button.MaterialButton;
 
 /**
@@ -34,6 +35,14 @@ public final class ButtonLoadingIcon implements AutoCloseable {
     public void setIcon(MaterialButton target, Drawable icon) {
         if (target == button) originalIcon = icon;
         else target.setIcon(icon);
+    }
+
+    /** Rebinding a list row updates its normal icon while preserving an in-flight animation. */
+    public void bind(MaterialButton target, String icon, boolean active, boolean loading) {
+        target.setSelected(active);
+        setIcon(target, MdiIcons.drawable(target.getContext(), icon));
+        if (loading) start(target);
+        else if (target == button) stop();
     }
 
     /** Stops loading and restores the latest normal icon and accessibility state. */

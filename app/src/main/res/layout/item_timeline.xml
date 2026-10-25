@@ -53,7 +53,7 @@
             android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1" android:visibility="gone" app:chipStrokeWidth="0dp" />
         <com.google.android.material.button.MaterialButton android:id="@+id/timelineRepost"
-            style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content"
+            style="@style/Widget.Fimtale.Interaction" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="@string/timeline_share" android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

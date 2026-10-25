@@ -21,7 +21,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
-/** Shared native report form for work and user details. */
+/** Shared native report form for works, comments and users. */
 public class ReportDialog extends DialogFragment {
     public static final String TAG = "report_dialog";
     private ReportViewModel model;
@@ -31,7 +31,7 @@ public class ReportDialog extends DialogFragment {
     public static void show(FragmentActivity activity, int type, long id, String label) {
         FragmentManager manager = activity.getSupportFragmentManager();
         if (manager.isStateSaved() || manager.findFragmentByTag(TAG) != null) return;
-        if ((type != ReportRequest.WORK && type != ReportRequest.USER) || id <= 0) return;
+        if ((type != ReportRequest.WORK && type != ReportRequest.COMMENT && type != ReportRequest.USER) || id <= 0) return;
         Bundle args = new Bundle(); args.putInt("target_type", type); args.putLong("target_id", id); args.putString("target_label", label);
         ReportDialog dialog = new ReportDialog(); dialog.setArguments(args); dialog.showNow(manager, TAG);
     }
@@ -48,7 +48,8 @@ public class ReportDialog extends DialogFragment {
             @Override public void afterTextChanged(Editable text) {}
         });
         AlertDialog dialog = builder.setTitle(requireArguments().getInt("target_type") == ReportRequest.WORK
-                        ? R.string.report_work : R.string.report_user)
+                        ? R.string.report_work : requireArguments().getInt("target_type") == ReportRequest.COMMENT
+                        ? R.string.community_report_comment : R.string.report_user)
                 .setView(content)
                 .setNegativeButton(R.string.report_cancel, null).setPositiveButton(R.string.report_submit, null).create();
         dialog.setCanceledOnTouchOutside(false);

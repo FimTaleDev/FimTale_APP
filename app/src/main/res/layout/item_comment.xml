@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
     android:orientation="horizontal"
     android:padding="16dp">
 
@@ -63,6 +64,29 @@
             android:paddingHorizontal="8dp"
             android:paddingVertical="4dp"
             tools:text="@string/preview_comment_chapter" />
+
+        <TextView android:id="@+id/commentEdited" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:minHeight="40dp" android:gravity="center_vertical" android:text="@string/community_edited"
+            android:textSize="12sp" android:textColor="?attr/colorPrimary" android:clickable="true" android:focusable="true"
+            android:visibility="gone" />
+        <HorizontalScrollView android:id="@+id/commentActions" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:scrollbars="none">
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/commentLike" style="@style/Widget.Fimtale.CommentAction"
+                    app:mdiIcon="thumb-up-outline" android:contentDescription="@string/community_like" />
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/commentDislike" style="@style/Widget.Fimtale.CommentAction"
+                    app:mdiIcon="thumb-down-outline" android:contentDescription="@string/community_dislike" />
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/commentFavorite" style="@style/Widget.Fimtale.CommentAction"
+                    app:mdiIcon="bookmark-outline" app:iconPadding="0dp" app:iconGravity="textStart"
+                    android:contentDescription="@string/community_favorite" />
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/commentReply" style="@style/Widget.Fimtale.CommentAction"
+                    app:mdiIcon="reply" android:text="@string/community_reply" />
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/commentStar" style="@style/Widget.Fimtale.CommentAction"
+                    app:mdiIcon="star-outline" android:contentDescription="@string/community_star_honor" android:visibility="gone" />
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/commentMore" style="@style/Widget.Fimtale.CommentAction"
+                    app:mdiIcon="dots-horizontal" android:contentDescription="@string/community_more" />
+            </LinearLayout>
+        </HorizontalScrollView>
 
     </LinearLayout>
 

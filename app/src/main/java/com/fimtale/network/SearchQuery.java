@@ -13,6 +13,15 @@ public final class SearchQuery {
         query.addProperty("filter", "type:" + type);
         return query.toString();
     }
+    public static String tags(java.util.Collection<String> tags, boolean matchAll) {
+        if (tags == null || tags.isEmpty()) throw new IllegalArgumentException("A tag scope is required");
+        JsonArray children = new JsonArray();
+        for (String name : tags) {
+            JsonObject term = new JsonObject(); term.addProperty("op", "tag"); term.addProperty("tag", name); children.add(term);
+        }
+        JsonObject scope = new JsonObject(); scope.addProperty("op", matchAll ? "and" : "or"); scope.add("children", children);
+        JsonObject query = new JsonObject(); query.add("tags_expr", scope); return query.toString();
+    }
     public static String rank(String field) {
         if (field == null || field.isEmpty()) return null;
         JsonObject term = new JsonObject();

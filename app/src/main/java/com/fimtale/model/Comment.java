@@ -17,6 +17,14 @@ public class Comment {
     @SerializedName("created_at") public String createdAt;
     @SerializedName("status_del") public int statusDel;
     @SerializedName("status_top") public boolean pinned;
+    @SerializedName("user_id") public int userId;
+    @SerializedName("edited_at") public String editedAt;
+    @SerializedName("count_like") public int likes;
+    @SerializedName("count_dislike") public int dislikes;
+    @SerializedName("count_fav") public int favorites;
+    @SerializedName("count_star_honor") public int starHonor;
+    public transient boolean liked, disliked, favorited, viewerLoaded;
+    public int authorId() { return user == null || user.getId() <= 0 ? userId : user.getId(); }
     public String getAvatarUrl() { return user == null ? null : user.getAvatar(); }
     public String getUserName() { return user == null ? AppStrings.get(R.string.profile_unknown_user) : user.getUserName(); }
     public String getContent() { return statusDel != 0 ? AppStrings.get(R.string.comments_deleted) : content; }

@@ -1,0 +1,88 @@
+<resources>
+    <string name="community_like">点赞</string>
+    <string name="community_dislike">点踩</string>
+    <string name="community_reply">回复</string>
+    <string name="community_cancel_reply">取消回复</string>
+    <string name="community_reply_to">回复 @%1$s · #%2$d</string>
+    <string name="community_edit_comment">编辑评论</string>
+    <string name="community_delete_comment">删除评论</string>
+    <string name="community_delete_comment_confirm">确定删除这条评论？</string>
+    <string name="community_comment_history">编辑记录</string>
+    <string name="community_no_history">暂无编辑记录</string>
+    <string name="community_previous_content">修改前 · %1$s</string>
+    <string name="community_edited">已编辑</string>
+    <string name="community_star_honor">StarHonor</string>
+    <string name="community_star_confirm">确定授予这条评论 StarHonor？</string>
+    <string name="community_comment_actions">评论 #%1$d</string>
+    <string name="community_favorite">收藏</string>
+    <string name="community_unfavorite">取消收藏</string>
+    <string name="community_send">发送</string>
+    <string name="community_save">保存修改</string>
+    <string name="community_comment_hint">写下评论，支持 BBCode</string>
+    <string name="community_changed">操作成功</string>
+    <string name="community_operation_uncertain">操作结果未确认，请刷新后确认</string>
+    <string name="community_account_changed">账号已变化，请重新打开此页面</string>
+    <string name="community_follow">关注</string>
+    <string name="community_login_required">登录后查看收藏，点击登录</string>
+    <string name="community_assign_folders">管理收藏位置</string>
+    <string name="community_unfollow">取消关注</string>
+    <string name="community_message">私信</string>
+    <string name="community_block_user">屏蔽用户</string>
+    <string name="community_block_confirm">确定%1$s @%2$s？</string>
+    <string name="community_user_number">用户 #%1$d</string>
+    <string name="community_user_content">@%1$s</string>
+    <string name="community_activity">动态</string>
+    <string name="community_works">作品</string>
+    <string name="community_posts">帖子</string>
+    <string name="community_comments">评论</string>
+    <string name="community_channels">频道</string>
+    <string name="community_tags">标签</string>
+    <string name="community_following">关注</string>
+    <string name="community_followers">粉丝</string>
+    <string name="community_browse_user">查看全部内容</string>
+    <string name="community_empty">暂无内容</string>
+    <string name="community_empty_tags">还没有关注的标签，点击浏览标签</string>
+    <string name="community_load_failed">加载失败，点击重试</string>
+    <string name="community_all_folders">全部作品</string>
+    <string name="community_manage_folders">管理文件夹</string>
+    <string name="community_create_folder">新建文件夹</string>
+    <string name="community_rename_folder">重命名文件夹</string>
+    <string name="community_delete_folder">删除文件夹</string>
+    <string name="community_delete_folder_confirm">确定删除收藏文件夹“%1$s”？不会删除作品正文。</string>
+    <string name="community_folder_name">文件夹名称</string>
+    <string name="community_folder_name_required">请填写文件夹名称（最多 191 字符）</string>
+    <string name="community_folder_count">%1$s（%2$d）</string>
+    <string name="community_no_folders">还没有收藏文件夹</string>
+    <string name="community_channel_stats">%1$d 作品 · %2$d 人收藏</string>
+    <string name="community_confirm_unfavorite">确定取消收藏“%1$s”？</string>
+    <string name="community_unfollow_tag">取消关注标签</string>
+    <string name="community_follow_tag">关注标签</string>
+    <string name="community_tag_follow_count">%1$s（%2$d）</string>
+    <string name="community_confirm_unfollow_tag">确定取消关注“%1$s”？</string>
+    <string name="community_view_original">查看原文</string>
+    <string name="community_more">更多操作</string>
+    <string name="community_read_comment">查看评论 #%1$d</string>
+    <string name="community_report_comment">举报评论</string>
+    <string name="community_select_folder">选择文件夹</string>
+    <string name="community_refresh">刷新</string>
+    <string name="community_open_tags_feed">查看已关注标签的作品</string>
+    <string name="community_followed_tag_works">关注标签的作品</string>
+    <string name="community_choose_tags">筛选标签</string>
+    <string name="community_match_any">匹配任一标签</string>
+    <string name="community_match_all">匹配全部标签</string>
+    <string name="community_scope_tags_hint">未选择时使用全部关注标签</string>
+    <string name="community_all_followed_tags">全部关注标签</string>
+    <string name="community_scope_login">登录后查看关注标签的作品，点击登录</string>
+    <string-array name="community_scope_tabs">
+        <item>@string/community_match_any</item><item>@string/community_match_all</item>
+    </string-array>
+    <string-array name="community_favorite_tabs">
+        <item>@string/community_works</item><item>@string/community_comments</item>
+        <item>@string/community_channels</item><item>@string/community_tags</item>
+    </string-array>
+    <string-array name="community_user_tabs">
+        <item>@string/community_activity</item><item>@string/community_works</item>
+        <item>@string/community_posts</item><item>@string/community_comments</item>
+        <item>@string/community_channels</item><item>@string/community_following</item><item>@string/community_followers</item>
+    </string-array>
+</resources>

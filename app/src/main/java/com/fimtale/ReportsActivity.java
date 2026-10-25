@@ -189,6 +189,9 @@ public abstract class ReportsActivity extends AppCompatActivity {
         catch (RuntimeException ignored) { return value; }
     }
     private void openTarget(MyReport report) {
+        if (report.target_type == 4 && report.target_id > 0 && report.target_id <= Integer.MAX_VALUE) {
+            startActivity(com.fimtale.community.CommentDetailActivity.intent(this, (int) report.target_id)); return;
+        }
         String path = report.targetPath(); if (path == null) return;
         if (report.target_type == 1 && report.target_id <= Integer.MAX_VALUE)
             startActivity(new Intent(this, TopicDetailActivity.class).putExtra(TopicDetailActivity.EXTRA_TOPIC_ID,(int)report.target_id));
@@ -283,7 +286,8 @@ public abstract class ReportsActivity extends AppCompatActivity {
             text(row,getString(R.string.report_status_heading, report.id, report.statusLabel()),18,true);
             text(row,getString(R.string.report_timestamps, date(report.created_at), date(report.updated_at)),12,false);
             text(row,report.kindLabel(),14,false);
-            if (report.targetPath()!=null) button(row,report.targetLabel(),() -> openTarget(report)); else text(row,report.targetLabel(),14,false);
+            if (report.targetPath()!=null || report.target_type == 4 && report.target_id > 0 && report.target_id <= Integer.MAX_VALUE)
+                button(row,report.targetLabel(),() -> openTarget(report)); else text(row,report.targetLabel(),14,false);
             if (report.payload != null && report.payload.content_snapshot != null && !report.payload.content_snapshot.isEmpty()) {
                 text(row,getString(R.string.report_content_snapshot),16,true); BbCodeRendering.setText(renderer,text(row,"",15,false),report.payload.content_snapshot);
             }

@@ -46,6 +46,7 @@ public final class ReaderCommentsPanel {
     private final PullRefreshLayout refresh;
     private final MaterialButton sort, previous, next, send, emoji;
     private final TextInputEditText input;
+    private final CommentReplyInput replyInput;
     private final View pager;
     private PageErrorView pageError;
     private Call<WorkCommentsResponse> activeCall;
@@ -66,6 +67,7 @@ public final class ReaderCommentsPanel {
         pageError = PageErrorView.wrap(list);
         list.setLayoutManager(new LinearLayoutManager(activity));
         adapter = new CommentAdapter(new ArrayList<>(), activity);
+        adapter.setContext(workId, 0, () -> load(page));
         list.setAdapter(adapter);
         list.setItemAnimator(null);
 
@@ -82,6 +84,12 @@ public final class ReaderCommentsPanel {
         input = root.findViewById(R.id.readerCommentComposerInput);
         emoji = root.findViewById(R.id.readerCommentComposerEmoji);
         send = root.findViewById(R.id.readerCommentComposerSend);
+        replyInput = new CommentReplyInput(root.findViewById(R.id.readerCommentComposerInputLayout), input,
+                () -> root.setTag(R.id.readerCommentComposerInputLayout, replyState()));
+        adapter.setOnReply(comment -> {
+            if (closed || sending) return;
+            replyInput.reply(comment, workId); replyInput.focus();
+        });
 
         refresh.setOnChildScrollUpCallback((parent, child) -> closed || loading || list.canScrollVertically(-1));
         refresh.setOnRefreshListener(() -> load(1));
@@ -104,6 +112,8 @@ public final class ReaderCommentsPanel {
         });
     }
 
+    public void setWorkAuthor(int authorId) { adapter.setWorkAuthor(authorId); }
+
     public void bind(int chapterId) {
         if (closed || chapterId < 0) return;
         if (this.chapterId != chapterId) {
@@ -112,7 +122,12 @@ public final class ReaderCommentsPanel {
         }
         // A recycled view may get a new panel while still showing the same chapter.
         Object previousChapter = root.getTag(R.id.readerCommentsRoot);
-        if (previousChapter != null && !Integer.valueOf(chapterId).equals(previousChapter)) input.setText("");
+        if (previousChapter != null && !Integer.valueOf(chapterId).equals(previousChapter)) {
+            input.setText(""); replyInput.clear();
+        } else {
+            Object saved = root.getTag(R.id.readerCommentComposerInputLayout);
+            replyInput.restore(saved instanceof android.os.Bundle ? (android.os.Bundle) saved : null, workId);
+        }
         root.setTag(R.id.readerCommentsRoot, chapterId);
         this.chapterId = chapterId;
         page = 1;
@@ -147,7 +162,7 @@ public final class ReaderCommentsPanel {
                     totalPages = result.totalPages(PER_PAGE);
                     if (requestedPage > totalPages) { load(totalPages); return; }
                     page = requestedPage;
-                    adapter.updateData(result.getItems());
+                    adapter.updateData(result.getItems(), result.viewer);
                     list.scrollToPosition(0);
                     title.setText(activity.getString(R.string.comments_count, result.total));
                     finishLoading();
@@ -197,21 +212,27 @@ public final class ReaderCommentsPanel {
             activity.startActivity(new Intent(activity, LoginActivity.class));
             return;
         }
+        if (!replyInput.canSubmit()) return;
 
         String token = UserPreferences.getToken(activity);
         sending = true;
         input.setEnabled(false);
         emoji.setEnabled(false);
         send.setEnabled(false);
-        Integer chapter = chapterId > 0 ? chapterId : null;
+        Integer chapter = replyInput.active() ? replyInput.chapterId() : chapterId > 0 ? chapterId : null;
         commentCall = RetrofitClient.getInstance().createUpdateComment(token,
-                new WorkCommentRequest(workId, content, chapter, null));
+                new WorkCommentRequest(workId, content, chapter, replyInput.commentId()));
         commentCall.enqueue(new Callback<Void>() {
             @Override public void onResponse(Call<Void> call, Response<Void> response) {
                 if (!validComment(call)) return;
                 finishSubmit();
+                if (!token.equals(UserPreferences.getToken(activity))) {
+                    Toast.makeText(activity, R.string.community_account_changed, Toast.LENGTH_LONG).show(); return;
+                }
                 if (response.isSuccessful()) {
+                    com.fimtale.community.Community.changed();
                     input.setText("");
+                    replyInput.clear();
                     input.clearFocus();
                     hideKeyboard();
                     descending = true;
@@ -260,11 +281,14 @@ public final class ReaderCommentsPanel {
 
     public void close() {
         closed = true;
+        replyInput.close();
         if (activeCall != null) activeCall.cancel();
         if (commentCall != null) { commentCall.cancel(); finishSubmit(); }
         refresh.setRefreshing(false);
         refresh.setOnRefreshListener(null);
         pageError.hide();
+        adapter.close();
         list.setAdapter(null);
     }
+    private android.os.Bundle replyState() { return replyInput == null ? null : replyInput.save(); }
 }

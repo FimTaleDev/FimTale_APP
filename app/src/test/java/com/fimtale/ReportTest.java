@@ -123,6 +123,12 @@ public class ReportTest {
         assertNull(fragment()); assertTrue(requests.isEmpty());
         ReportDialog.show(activity, 7, 0, "错误目标"); assertNull(fragment());
     }
+    @Test public void commentReportPassesViewModelValidationAndKeepsCommentId() throws Exception {
+        open(ReportRequest.COMMENT, 77); content("评论举报原因"); submit();
+        await(() -> fragment() == null);
+        assertEquals(1, requests.size()); assertEquals(4, body(0).get("target_type").getAsInt());
+        assertEquals(77, body(0).get("target_id").getAsLong());
+    }
     @Test public void inFlightRotationKeepsDraftAndPreventsDuplicateSubmissions() throws Exception {
         gate = new CountDownLatch(1); open(7, 456); content("举报说明"); ReportViewModel before = model(); submit();
         await(() -> requests.size() == 1);

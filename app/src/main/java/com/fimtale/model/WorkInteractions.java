@@ -34,6 +34,7 @@ public final class WorkInteractions {
     public static class Folder {
         public int id;
         public String name;
+        @SerializedName("count_works") public int count;
         public Folder(int id, String name) { this.id = id; this.name = name; }
     }
     public static class Vote {

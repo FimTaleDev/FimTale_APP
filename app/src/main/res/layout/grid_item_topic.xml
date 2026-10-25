@@ -182,6 +182,9 @@
                     tools:text="@string/preview_fifty_six" />
 
             </LinearLayout>
+            <com.google.android.material.button.MaterialButton android:id="@+id/topicManageFavorite"
+                style="@style/Widget.Fimtale.Interaction" android:layout_width="wrap_content" android:layout_height="48dp"
+                android:layout_gravity="end" android:visibility="gone" android:text="@string/community_assign_folders" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -8,14 +8,14 @@ import com.google.gson.annotations.SerializedName;
 
 /** EntityType and CreateReportReq from ft-front/schema/openapi.json. */
 public final class ReportRequest {
-    public static final int WORK = 1, USER = 7;
+    public static final int WORK = 1, COMMENT = 4, USER = 7;
     @SerializedName("target_type") public final int targetType;
     @SerializedName("target_id") public final long targetId;
     public final String kind = "report";
     public final String content;
 
     public ReportRequest(int targetType, long targetId, String content) {
-        if ((targetType != WORK && targetType != USER) || targetId <= 0)
+        if ((targetType != WORK && targetType != COMMENT && targetType != USER) || targetId <= 0)
             throw new IllegalArgumentException(AppStrings.get(R.string.report_target_invalid));
         if (trim(content).isEmpty()) throw new IllegalArgumentException(AppStrings.get(R.string.report_empty_content));
         this.targetType = targetType;

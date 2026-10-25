@@ -6,4 +6,5 @@ public class TopicListResponse {
     private int total;
     public List<Topic> getTopicArray() { return items == null ? new ArrayList<>() : items; }
     public int getTotalPage() { return (total + 19) / 20; }
+    public int getTotal() { return total; }
 }

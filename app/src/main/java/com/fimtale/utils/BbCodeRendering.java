@@ -171,6 +171,7 @@ public final class BbCodeRendering {
     }
     private static void openUrl(Context context, String url) {
         if (!alive(context) || BbCode.safeUrl(url, false) == null) return;
+        if (com.fimtale.community.CommunityLinks.openComment(context, url)) return;
         try { context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
         catch (android.content.ActivityNotFoundException e) { Toast.makeText(context, context.getString(R.string.error_no_link_handler), Toast.LENGTH_SHORT).show(); }
     }

@@ -10,6 +10,27 @@ import retrofit2.http.*;
 
 /** Routes from ft-front/schema/openapi.json. No deprecated v1 endpoints. */
 public interface FimTaleApiService {
+    @POST("work/do_comment_vote") Call<Void> voteComment(@Header("Token") String token, @Body com.fimtale.community.Community.CommentVote request);
+    @POST("work/do_comment_star_honor") Call<Void> starComment(@Header("Token") String token, @Body com.fimtale.community.Community.CommentId request);
+    @POST("work/favorite_comment") Call<Void> favoriteComment(@Header("Token") String token, @Body com.fimtale.community.Community.CommentId request);
+    @POST("work/delete") Call<Void> deleteComment(@Header("Token") String token, @Body com.fimtale.community.Community.DeleteComment request);
+    @GET("work/get_comment_edit_history") Call<List<com.fimtale.community.Community.CommentHistory>> getCommentHistory(@Header("Token") String token, @Query("comment_id") int id);
+    @GET("work/get_comment") Call<CommentResponse> getCommentViewer(@Header("Token") String token, @Query("comment_id") int id);
+    @GET("work/get_comment") Call<CommentResponse> getCommentLocation(@Query("comment_id") int id, @Query("per_page") int perPage,
+            @Query("order_by") String order, @Query("order_option") String direction);
+    @GET("work/get_favorite_comments") Call<com.fimtale.community.Community.CommentPage> getFavoriteComments(@Header("Token") String token, @Query("page") int page, @Query("per_page") int perPage);
+    @POST("user/follow_user") Call<Void> followUser(@Header("Token") String token, @Body com.fimtale.community.Community.UserId request);
+    @POST("user/create_conversation") Call<com.fimtale.notifications.Inbox.Conversation> createConversation(@Header("Token") String token, @Body com.fimtale.community.Community.ConversationRequest request);
+    @GET("user/get_user_page_tab") Call<com.fimtale.community.Community.UserTab> getUserTab(@Header("Token") String token, @Query("username") String username, @Query("tab") String tab, @Query("page") int page, @Query("per_page") int perPage);
+    @GET("user/get_user_page_header") Call<UserDetailResponse> getUserHeader(@Header("Token") String token, @Query("username") String username);
+    @POST("user/create_favorite_folder") Call<WorkInteractions.Folder> createFavoriteFolder(@Header("Token") String token, @Body com.fimtale.community.Community.FolderRequest request);
+    @POST("user/update_favorite_folder") Call<WorkInteractions.Folder> updateFavoriteFolder(@Header("Token") String token, @Body com.fimtale.community.Community.FolderRequest request);
+    @POST("user/delete_favorite_folder") Call<Void> deleteFavoriteFolder(@Header("Token") String token, @Body com.fimtale.community.Community.FolderRequest request);
+    @GET("work/get_favorite_works") Call<FavoritesResponse> getFavoriteWorks(@Header("Token") String token, @Query("folder_id") Integer folder, @Query("page") int page, @Query("per_page") int perPage);
+    @GET("channel/get_favorite_channels") Call<List<com.fimtale.community.Community.Channel>> getFavoriteChannels(@Header("Token") String token);
+    @POST("channel/favorite_channel") Call<Void> favoriteChannel(@Header("Token") String token, @Body com.fimtale.community.Community.ChannelId request);
+    @GET("tag/get_favorite_tags") Call<com.fimtale.community.Community.TagPage> getFavoriteTags(@Header("Token") String token, @Query("page") int page, @Query("per_page") int perPage);
+    @POST("tag/favorite_tag") Call<com.fimtale.community.Community.TagFavorite> favoriteTag(@Header("Token") String token, @Body com.fimtale.community.Community.TagId request);
     @GET("report/get_reports") Call<com.fimtale.report.MyReport.Page> getMyReports(@Header("Token") String token,
             @Query("source_user_id") long sourceUserId, @Query("status") List<Integer> statuses,
             @Query("report_id") Long reportId, @Query("page") int page, @Query("per_page") int perPage);
@@ -103,6 +124,7 @@ public interface FimTaleApiService {
     @GET("user/get_user_page_tab") Call<UserWorksResponse> getUserTopics(
             @Query("username") String username, @Query("tab") String tab, @Query("page") int page);
     @GET("tag/get_tag") Call<TagInfo> getTag(@Query("tag_name") String tagName);
+    @GET("tag/get_tag") Call<TagInfo> getTagViewer(@Header("Token") String token, @Query("tag_name") String tagName);
     @GET("tag/get_tag_works") Call<TopicListResponse> getTagTopics(
             @Query("tag_name") String tagName, @Query("page") int page, @Query("rank") String rank);
     @GET("tag/list_tags") Call<List<TagGroup>> getTags(@Query("page") int page, @Query("keyword") String keyword);

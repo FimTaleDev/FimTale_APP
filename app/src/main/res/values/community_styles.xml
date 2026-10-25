@@ -1,0 +1,23 @@
+<resources>
+    <style name="Widget.Fimtale.Interaction" parent="Widget.Material3.Button.TextButton">
+        <item name="iconSize">@dimen/mdi_icon_size</item>
+        <item name="iconPadding">4dp</item>
+        <item name="iconTint">@color/work_action_tint</item>
+        <item name="android:textColor">@color/work_action_tint</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="toggleCheckedStateOnClick">false</item>
+    </style>
+    <style name="Widget.Fimtale.CommentAction" parent="Widget.Fimtale.Interaction">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:paddingHorizontal">8dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+</resources>

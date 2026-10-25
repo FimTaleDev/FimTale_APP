@@ -6,6 +6,11 @@
         android:title="@string/filters_preset_title"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/action_follow_tag"
+        android:title="@string/community_follow_tag"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_tag_info"
         android:title="@string/common_details"
         android:visible="false"

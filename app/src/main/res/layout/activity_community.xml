@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="?android:attr/colorBackground">
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_margin="16dp" app:cardCornerRadius="16dp" app:cardElevation="0dp"
+        app:strokeWidth="0dp" app:cardBackgroundColor="?android:attr/colorBackground">
+        <com.fimtale.ui.icons.MdiToolbar android:id="@+id/communityToolbar"
+            android:layout_width="match_parent" android:layout_height="?attr/actionBarSize"
+            app:mdiNavigationIcon="arrow-left" app:navigationIconTint="?attr/colorOnSurface" />
+    </com.google.android.material.card.MaterialCardView>
+    <com.google.android.material.tabs.TabLayout android:id="@+id/communityTabs"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="?android:attr/colorBackground" app:tabMode="scrollable" app:tabGravity="start" />
+    <LinearLayout android:id="@+id/communityFolders" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="16dp" android:paddingEnd="16dp" android:visibility="gone">
+        <Spinner android:id="@+id/communityFolderSpinner" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_height="48dp" android:contentDescription="@string/community_select_folder" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/communityFolderManage"
+            style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="48dp"
+            android:text="@string/community_manage_folders" />
+    </LinearLayout>
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/communityList"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:clipToPadding="false" android:padding="8dp" />
+        <ProgressBar android:id="@+id/communityProgress" android:layout_width="48dp"
+            android:layout_height="48dp" android:layout_gravity="center" android:visibility="gone" />
+        <TextView android:id="@+id/communityStatus" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_gravity="center" android:padding="24dp"
+            android:text="@string/community_empty" android:textColor="?attr/colorOnSurfaceVariant" android:visibility="gone" />
+    </FrameLayout>
+    <LinearLayout android:id="@+id/communityPager" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center"
+        android:paddingHorizontal="8dp" android:visibility="gone">
+        <com.google.android.material.button.MaterialButton android:id="@+id/communityPrevious"
+            style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="48dp"
+            android:text="@string/common_previous_page" />
+        <TextView android:id="@+id/communityPage" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:gravity="center" android:textColor="?attr/colorOnSurfaceVariant" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/communityNext"
+            style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="48dp"
+            android:text="@string/common_next_page" />
+    </LinearLayout>
+</LinearLayout>

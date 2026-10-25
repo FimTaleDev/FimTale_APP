@@ -11,6 +11,12 @@ public class UserDetailResponse {
     private Stats stats;
     public List<Badge> badges;
     public List<Medal> medals;
+    @SerializedName("user_operations") public List<com.fimtale.community.Community.Follow> follows;
+    public boolean followedBy(int viewerId) {
+        if (follows != null) for (com.fimtale.community.Community.Follow follow : follows)
+            if (follow != null && follow.follower_id == viewerId && follow.followee_id == id) return true;
+        return false;
+    }
     public int getId() { return id; }
     public String getUserName() { return username; }
     public String getAvatar() { return SiteUrls.media(avatar); }

@@ -100,6 +100,8 @@ import retrofit2.Response;
 public class TopicDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_TOPIC_ID = "topic_id";
+    public static final String EXTRA_FOCUS_COMMENT = "focus_comment";
+    public static final String EXTRA_COMMENT_REPLY = "comment_reply";
 
     private AppBarLayout appBarLayout;
     private CollapsingToolbarLayout collapsingToolbarLayout;
@@ -135,6 +137,8 @@ public class TopicDetailActivity extends AppCompatActivity {
     private Call<Void> commentCall;
     private boolean commentSending;
     private boolean commentMode;
+    private com.fimtale.ui.CommentReplyInput replyInput;
+    private boolean focusReplyAfterLoad;
 
     private Markwon markwon;
     private int currentTopicId;
@@ -198,6 +202,14 @@ public class TopicDetailActivity extends AppCompatActivity {
 
         currentTopicId = getIntent().getIntExtra(EXTRA_TOPIC_ID, -1);
         commentsSection = new WorkCommentsSection(this, currentTopicId, this::updateCommentCount);
+        replyInput = new com.fimtale.ui.CommentReplyInput(findViewById(R.id.commentComposerInputLayout),
+                commentComposerInput, this::updateBottomActionMode);
+        Bundle replyState = savedInstanceState == null ? getIntent().getBundleExtra(EXTRA_COMMENT_REPLY)
+                : savedInstanceState.getBundle(EXTRA_COMMENT_REPLY);
+        replyInput.restore(replyState, currentTopicId);
+        focusReplyAfterLoad = replyInput.active() && (savedInstanceState == null || savedInstanceState.getBoolean("reply_focus_pending"));
+        getIntent().removeExtra(EXTRA_COMMENT_REPLY);
+        commentsSection.setOnReply(this::replyToComment);
         workActions = new WorkActions(this, currentTopicId,
                 () -> startActivity(new Intent(this, LoginActivity.class)),
                 data -> updateInteractionCounts(data.getTopicInfo()));
@@ -308,6 +320,7 @@ public class TopicDetailActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
+        if (replyInput != null) replyInput.close();
         if (workActions != null) workActions.close();
         if (commentsSection != null) commentsSection.close();
         if (chaptersSheet != null) chaptersSheet.dismiss();
@@ -317,6 +330,11 @@ public class TopicDetailActivity extends AppCompatActivity {
         if (elevationAnimator != null) elevationAnimator.cancel();
         editorAccess.close();
         super.onDestroy();
+    }
+    @Override protected void onSaveInstanceState(@NonNull Bundle out) {
+        super.onSaveInstanceState(out);
+        if (replyInput != null) out.putBundle(EXTRA_COMMENT_REPLY, replyInput.save());
+        out.putBoolean("reply_focus_pending", focusReplyAfterLoad);
     }
 
     private void showEditorActions() {
@@ -638,6 +656,14 @@ public class TopicDetailActivity extends AppCompatActivity {
         TopicInfo topic = data.getTopicInfo();
         AuthorInfo author = data.getAuthorInfo();
         this.currentAuthor = author;
+        if (commentsSection != null) {
+            commentsSection.setWorkAuthor(author == null ? 0 : author.getId());
+            int focusComment = getIntent().getIntExtra(EXTRA_FOCUS_COMMENT, 0);
+            if (focusComment > 0) {
+                getIntent().removeExtra(EXTRA_FOCUS_COMMENT);
+                commentsSection.focus(focusComment);
+            }
+        }
         invalidateOptionsMenu();
 
         currentTopicTitle = topic.getTitle();
@@ -729,8 +755,10 @@ public class TopicDetailActivity extends AppCompatActivity {
         java.util.List<TopicDetailResponse.ChapterEdge> roots = com.fimtale.model.ChapterNavigation.choices(data, 0);
         firstChapterId = roots.size() == 1 && roots.get(0).to != null ? roots.get(0).to : 0;
         findViewById(R.id.showChaptersButton).setVisibility(data.getMenu().isEmpty() ? View.GONE : View.VISIBLE);
-        setCommentMode(false);
-        readingActionsBar.setVisibility(View.VISIBLE);
+        setCommentMode(replyInput != null && replyInput.active());
+        if (focusReplyAfterLoad) {
+            focusReplyAfterLoad = false; commentsSection.open(); replyInput.focus();
+        }
     }
 
     private void updateInteractionCounts(TopicInfo topic) {
@@ -951,6 +979,7 @@ public class TopicDetailActivity extends AppCompatActivity {
     private void updateBottomActionMode() {
         if (editableWork == null || scrollView == null || commentsRoot == null
                 || scrollView.getVisibility() != View.VISIBLE) return;
+        if ((replyInput != null && replyInput.active()) || commentComposerInput.hasFocus()) { setCommentMode(true); return; }
         android.graphics.Rect viewport = new android.graphics.Rect();
         android.graphics.Rect comments = new android.graphics.Rect();
         if (!scrollView.getGlobalVisibleRect(viewport)) return;
@@ -992,13 +1021,14 @@ public class TopicDetailActivity extends AppCompatActivity {
             startActivity(new Intent(this, LoginActivity.class));
             return;
         }
+        if (!replyInput.canSubmit()) return;
 
         String token = UserPreferences.getToken(this);
         commentSending = true;
         commentComposerInput.setEnabled(false);
         commentComposerSend.setEnabled(false);
         commentCall = RetrofitClient.getInstance().createUpdateComment(token,
-                new com.fimtale.model.WorkCommentRequest(currentTopicId, content));
+                new com.fimtale.model.WorkCommentRequest(currentTopicId, content, replyInput.chapterId(), replyInput.commentId()));
         commentCall.enqueue(new Callback<Void>() {
             @Override public void onResponse(Call<Void> call, Response<Void> response) {
                 if (call != commentCall || call.isCanceled() || isFinishing() || isDestroyed()) return;
@@ -1006,8 +1036,13 @@ public class TopicDetailActivity extends AppCompatActivity {
                 commentSending = false;
                 commentComposerInput.setEnabled(true);
                 commentComposerSend.setEnabled(true);
+                if (!token.equals(UserPreferences.getToken(TopicDetailActivity.this))) {
+                    Toast.makeText(TopicDetailActivity.this, R.string.community_account_changed, Toast.LENGTH_LONG).show(); return;
+                }
                 if (response.isSuccessful()) {
+                    com.fimtale.community.Community.changed();
                     commentComposerInput.setText("");
+                    replyInput.clear();
                     commentComposerInput.clearFocus();
                     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                     if (imm != null) imm.hideSoftInputFromWindow(commentComposerInput.getWindowToken(), 0);
@@ -1036,6 +1071,12 @@ public class TopicDetailActivity extends AppCompatActivity {
         commentComposerInput.getText().replace(start, end, value);
         commentComposerInput.requestFocus();
         commentComposerInput.setSelection(Math.min(commentComposerInput.length(), start + value.length()));
+    }
+
+    private void replyToComment(com.fimtale.model.Comment comment) {
+        if (commentSending) return;
+        replyInput.reply(comment, currentTopicId);
+        setCommentMode(true); commentsSection.open(); replyInput.focus();
     }
 
 }

@@ -29,6 +29,8 @@ import io.noties.markwon.Markwon;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
+import com.fimtale.ui.ButtonLoadingIcon;
 import java.util.function.Consumer;
 
 public final class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.Holder> {
@@ -36,6 +38,7 @@ public final class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.
     private final Set<String> reposting;
     private final Consumer<TimelineItem> onRepost;
     private final Markwon renderer;
+    private final Set<ButtonLoadingIcon> loadingIcons = new HashSet<>();
 
     public TimelineAdapter(Context context, List<TimelineItem> items, Set<String> reposting,
                            Consumer<TimelineItem> onRepost) {
@@ -44,7 +47,8 @@ public final class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.
         setStateRestorationPolicy(StateRestorationPolicy.PREVENT_WHEN_EMPTY);
     }
     @NonNull @Override public Holder onCreateViewHolder(@NonNull ViewGroup parent, int type) {
-        return new Holder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_timeline, parent, false));
+        Holder holder = new Holder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_timeline, parent, false));
+        loadingIcons.add(holder.loading); return holder;
     }
     @Override public void onBindViewHolder(@NonNull Holder holder, int position) {
         TimelineItem item = items.get(position);
@@ -91,10 +95,14 @@ public final class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.
         holder.context.setVisibility(contextPath == null ? View.GONE : View.VISIBLE);
         holder.context.setText(TextUtils.isEmpty(item.contextLabel()) ? context.getString(R.string.common_view_original) : item.contextLabel());
         holder.context.setOnClickListener(view -> openSite(context, contextPath));
-        holder.repost.setVisibility(item.canHighlight() ? View.VISIBLE : View.GONE);
-        holder.repost.setEnabled(!reposting.contains(item.key()));
-        holder.repost.setText(reposting.contains(item.key()) ? context.getString(R.string.timeline_sharing) : context.getString(R.string.timeline_share));
+        bindRepost(holder, item);
         holder.repost.setOnClickListener(view -> onRepost.accept(item));
+    }
+    private void bindRepost(Holder holder, TimelineItem item) {
+        boolean busy = reposting.contains(item.key());
+        holder.repost.setVisibility(item.canHighlight() ? View.VISIBLE : View.GONE);
+        holder.repost.setEnabled(!busy); holder.repost.setText(R.string.timeline_share);
+        holder.loading.bind(holder.repost, "share-variant-outline", false, item.canHighlight() && busy);
     }
     private static void setOptional(TextView view, String text) {
         view.setText(text); view.setVisibility(TextUtils.isEmpty(text) ? View.GONE : View.VISIBLE);
@@ -120,10 +128,20 @@ public final class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.
         else openSite(context, item.path());
     }
     private static void openSite(Context context, String path) {
+        if (com.fimtale.community.CommunityLinks.openComment(context, path)) return;
         if (path != null) context.startActivity(new Intent(context, SiteActivity.class).putExtra(SiteActivity.EXTRA_PATH, path));
     }
     @Override public int getItemCount() { return items.size(); }
+    @Override public void onViewAttachedToWindow(@NonNull Holder holder) {
+        super.onViewAttachedToWindow(holder); int position = holder.getBindingAdapterPosition();
+        if (position != RecyclerView.NO_POSITION && position < items.size()) bindRepost(holder, items.get(position));
+    }
+    @Override public void onViewDetachedFromWindow(@NonNull Holder holder) { holder.loading.stop(); super.onViewDetachedFromWindow(holder); }
+    @Override public void onDetachedFromRecyclerView(@NonNull RecyclerView recycler) {
+        for (ButtonLoadingIcon icon : loadingIcons) icon.close(); super.onDetachedFromRecyclerView(recycler);
+    }
     @Override public void onViewRecycled(@NonNull Holder holder) {
+        holder.loading.stop();
         Glide.with(holder.itemView.getContext().getApplicationContext()).clear(holder.avatar);
         Glide.with(holder.itemView.getContext().getApplicationContext()).clear(holder.cover);
         holder.body.setText(null);
@@ -135,6 +153,7 @@ public final class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.
         final View card;
         final Chip context;
         final MaterialButton open, repost;
+        final ButtonLoadingIcon loading = new ButtonLoadingIcon();
         Holder(View view) {
             super(view);
             avatar = view.findViewById(R.id.timelineAvatar); cover = view.findViewById(R.id.timelineCover);
