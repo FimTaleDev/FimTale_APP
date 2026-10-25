@@ -2,8 +2,10 @@ package com.fimtale.channels;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.InputType;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.lifecycle.ViewModelProvider;
 import com.bumptech.glide.Glide;
@@ -15,6 +17,9 @@ import com.fimtale.modules.ModuleActivity;
 import com.fimtale.network.SiteUrls;
 import com.fimtale.utils.MdiIcons;
 import com.fimtale.utils.UserPreferences;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.gson.*;
 import static com.fimtale.modules.ModuleApi.*;
 
@@ -65,28 +70,70 @@ public class ChannelDirectoryActivity extends ModuleActivity {
             }
         }
         if (state.tab == 1 && loginRequired()) return;
+        if (state.tab == 0) renderSearchBar();
         if (state.channels.size() == 0 && state.loading("page") && !state.errors.containsKey("page")) { loadingBlocks(3); return; }
-        if (state.tab == 0) {
-            field(content, R.string.channel_search_hint, state.input, InputType.TYPE_CLASS_TEXT, state::input);
-            button(content, R.string.channel_search, "search", false, false, state::search);
-        }
         if (!state.loading("page") && state.channels.size() == 0 && !state.errors.containsKey("page")) text(content, R.string.modules_empty);
         for (JsonElement value : state.channels) {
             JsonObject channel = obj(value); int id = num(channel, "id"); if (id <= 0) continue;
-            LinearLayout card = column(content);
+            MaterialCardView card = new MaterialCardView(this);
+            card.setRadius(dp(16)); card.setCardElevation(0); card.setStrokeWidth(0);
+            card.setCardBackgroundColor(getColor(R.color.card_background));
+            card.setFocusable(true); card.setEnabled(!state.busy());
+            card.setOnClickListener(v -> {
+                if (!state.busy()) startActivity(ChannelActivity.intent(this, id));
+            });
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
+            cardParams.setMargins(dp(8), dp(4), dp(8), dp(12)); content.addView(card, cardParams);
+            LinearLayout layout = new LinearLayout(this); layout.setOrientation(LinearLayout.VERTICAL); card.addView(layout);
             String cover = str(channel, "cover_image");
-            if (!cover.isEmpty()) {
-                ImageView image = new ImageView(this); image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                image.setContentDescription(getString(R.string.channel_cover_image, str(channel, "name")));
-                card.addView(image, new LinearLayout.LayoutParams(-1, dp(140)));
-                Glide.with(this).load(SiteUrls.media(cover)).placeholder(MdiIcons.drawable(this, "image-outline")).into(image);
+            ImageView image = new ImageView(this); image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(image, com.google.android.material.R.attr.colorSurfaceVariant));
+            image.setContentDescription(getString(R.string.channel_cover_image, str(channel, "name")));
+            layout.addView(image, new LinearLayout.LayoutParams(-1, dp(200)));
+            Glide.with(this).load(SiteUrls.media(cover)).placeholder(MdiIcons.drawable(this, "image-outline"))
+                    .error(MdiIcons.drawable(this, "image-outline")).into(image);
+            LinearLayout details = new LinearLayout(this); details.setOrientation(LinearLayout.VERTICAL);
+            details.setPadding(dp(16), dp(12), dp(16), dp(12)); layout.addView(details);
+            TextView title = heading(details, str(channel, "name"));
+            title.setTextIsSelectable(false);
+            title.setMaxLines(2); title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            String summary = str(channel, "description");
+            if (!summary.isEmpty()) {
+                TextView description = text(details, summary);
+                description.setTextIsSelectable(false);
+                description.setMaxLines(3); description.setEllipsize(android.text.TextUtils.TruncateAt.END);
             }
-            heading(card, str(channel, "name")); text(card, str(channel, "description"));
-            text(card, getString(R.string.channel_stats, num(channel, "count_works"), num(channel, "count_user_fav"), num(channel, "count_comments")));
-            button(card, R.string.channel_open, "open:" + id, false, false, () -> startActivity(ChannelActivity.intent(this, id)));
+            TextView stats = text(details, getString(R.string.channel_stats, num(channel, "count_works"), num(channel, "count_user_fav"), num(channel, "count_comments")));
+            stats.setTextIsSelectable(false);
+            stats.setTextColor(com.google.android.material.color.MaterialColors.getColor(stats, com.google.android.material.R.attr.colorOnSurfaceVariant));
         }
         pager(state.page, state.pages(), state::load);
         if (wantCreate && state.signedIn() && !state.loading("header") && state.auth.size() > 0) create();
+    }
+    private void renderSearchBar() {
+        View bar = getLayoutInflater().inflate(R.layout.view_channel_search, content, false);
+        TextInputEditText input = bar.findViewById(R.id.channelSearchInput);
+        MaterialButton submit = bar.findViewById(R.id.channelSearchButton);
+        input.setTag("module_field:" + R.string.channel_search_hint);
+        input.setSaveEnabled(false);
+        input.setText(state.input);
+        input.setEnabled(!state.busy()); submit.setEnabled(!state.busy());
+        watch(input, state::input);
+        submit.setOnClickListener(view -> submitSearch(input));
+        input.setOnEditorActionListener((view, action, event) -> {
+            if (action == EditorInfo.IME_ACTION_SEARCH || action == EditorInfo.IME_ACTION_DONE) {
+                submitSearch(input); return true;
+            }
+            return false;
+        });
+        content.addView(bar);
+    }
+    private void submitSearch(TextInputEditText input) {
+        if (state.busy()) return;
+        input.clearFocus();
+        InputMethodManager keyboard = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(input.getWindowToken(), 0);
+        state.search();
     }
     private void create() {
         if (state.busy()) return;

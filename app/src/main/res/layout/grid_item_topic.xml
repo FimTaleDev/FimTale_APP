@@ -93,6 +93,7 @@
 
         <!-- 关键改动3：将文字区域放在独立的 LinearLayout 中，保证背景干净 -->
         <LinearLayout
+            android:id="@+id/topicCardContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"

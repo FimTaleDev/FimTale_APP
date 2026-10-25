@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingBottom="12dp">
+
+    <com.fimtale.ui.icons.MdiTextInputLayout
+        android:id="@+id/channelSearchInputLayout"
+        style="@style/Widget.Fimtale.TextInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:hint="@string/channel_search_hint"
+        app:endIconMode="clear_text">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/channelSearchInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1" />
+    </com.fimtale.ui.icons.MdiTextInputLayout>
+
+    <com.fimtale.ui.icons.MdiButton
+        android:id="@+id/channelSearchButton"
+        style="@style/Widget.Material3.Button.IconButton"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/search_submit_description"
+        app:backgroundTint="@android:color/transparent"
+        app:iconSize="@dimen/mdi_icon_size"
+        app:mdiIcon="magnify"
+        app:iconTint="?attr/colorPrimary" />
+</LinearLayout>

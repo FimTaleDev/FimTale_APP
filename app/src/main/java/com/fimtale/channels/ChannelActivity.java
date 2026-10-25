@@ -1,25 +1,39 @@
 package com.fimtale.channels;
 
+import android.animation.ObjectAnimator;
 import android.content.*;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.*;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.widget.NestedScrollView;
 import androidx.lifecycle.ViewModelProvider;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.CircleCrop;
 import com.fimtale.*;
 import com.fimtale.account.AccountActivity;
+import com.fimtale.adapter.TopicAdapter;
+import com.fimtale.model.Topic;
+import com.fimtale.model.TopicViewItem;
 import com.fimtale.modules.*;
 import com.fimtale.network.SiteUrls;
 import com.fimtale.report.*;
 import com.fimtale.ui.ButtonLoadingIcon;
+import com.fimtale.ui.FtemojiPicker;
+import com.fimtale.ui.ImagePreview;
+import com.fimtale.ui.ShimmerSkeletonView;
 import com.fimtale.utils.BbCodeRendering;
+import com.fimtale.utils.MdiIcons;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.gson.*;
 import io.noties.markwon.Markwon;
 import java.io.*;
@@ -35,7 +49,16 @@ public class ChannelActivity extends ModuleActivity {
     private Markwon renderer;
     private TextInputEditText input;
     private TextView context;
-    private MaterialButton send,cancel,commentTags;
+    private ImageView coverImage;
+    private MaterialCardView toolbarContainer;
+    private ObjectAnimator toolbarElevationAnimator;
+    private boolean toolbarElevated;
+    private String coverUrl;
+    private final List<View> workCards = new ArrayList<>();
+    private final List<View> commentRows = new ArrayList<>();
+    private final List<ButtonLoadingIcon> commentIcons = new ArrayList<>();
+    private MenuItem moreAction;
+    private MaterialButton send,cancel,commentTags,emoji;
     private final ButtonLoadingIcon sendIcon=new ButtonLoadingIcon();
     private boolean bindingComposer;
     private String pendingCsv="";
@@ -53,8 +76,12 @@ public class ChannelActivity extends ModuleActivity {
         state.init(id,getIntent().getIntExtra(EXTRA_COMMENT_ID,0),getIntent().getIntExtra(EXTRA_TAB,0),
                 getIntent().getIntExtra(EXTRA_FOLDER_ID,-1),getIntent().getIntExtra(EXTRA_BALLOT_ID,0));
         if(saved!=null)pendingCsv=saved.getString("csv","");
-        bind(state,R.string.channels_title);renderer=BbCodeRendering.create(this);tabLabels(R.array.channel_tabs,state.tab,state::select);centerTabs();centerPagers();composer();
-        toolbar.getMenu().add(R.string.channel_report).setOnMenuItemClickListener(item->{if(state.ready()&&!state.deleted()&&!state.busy())ReportDialog.show(this,ReportRequest.CHANNEL,state.id,str(state.channel,"name"));return true;});
+        bind(state,R.string.channels_title,R.layout.activity_channel);
+        setupHeader();renderer=BbCodeRendering.create(this);tabLabels(R.array.channel_tabs,state.tab,state::select);centerTabs();centerPagers();composer();
+        moreAction=toolbar.getMenu().add(R.string.common_more);
+        moreAction.setIcon(MdiIcons.drawable(this,"dots-vertical"));
+        moreAction.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        moreAction.setOnMenuItemClickListener(item->{showChannelMenu();return true;});
         startPage();
     }
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("csv",pendingCsv);}
@@ -62,15 +89,51 @@ public class ChannelActivity extends ModuleActivity {
     @Override protected boolean usesHeaderLoadingIndicator(){return false;}
     @Override protected boolean supportsPullToRefresh(){return true;}
     @Override protected boolean usesToolbarRefresh(){return false;}
+    private void showChannelMenu() {
+        if (!state.ready() || state.deleted() || state.busy()) return;
+        menu(new String[]{getString(R.string.channel_report)}, selected -> {
+            if (state.ready() && !state.deleted())
+                ReportDialog.show(this, ReportRequest.CHANNEL, state.id, str(state.channel, "name"));
+        });
+    }
+    private void setupHeader() {
+        coverImage = findViewById(R.id.channelCoverImage);
+        coverImage.setImageDrawable(MdiIcons.coverPlaceholder(this));
+        toolbarContainer = findViewById(R.id.channelToolbarContainer);
+        scroll.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (view, x, y, oldX, oldY) -> {
+            boolean elevated = y > 0;
+            if (elevated == toolbarElevated) return;
+            toolbarElevated = elevated;
+            if (toolbarElevationAnimator != null) toolbarElevationAnimator.cancel();
+            toolbarElevationAnimator = ObjectAnimator.ofFloat(toolbarContainer, "cardElevation",
+                    toolbarContainer.getCardElevation(), elevated ? dp(4) : 0);
+            toolbarElevationAnimator.setDuration(200);
+            toolbarElevationAnimator.start();
+        });
+    }
+    private void renderHeader() {
+        moreAction.setEnabled(state.ready() && !state.deleted() && !state.busy());
+        toolbar.setTitle(state.ready() ? str(state.channel, "name") : getString(R.string.channels_title));
+        coverImage.setContentDescription(state.ready()
+                ? getString(R.string.channel_cover_image, str(state.channel, "name")) : null);
+        String nextCover = state.ready() ? SiteUrls.media(str(state.channel, "cover_image")) : null;
+        if (Objects.equals(coverUrl, nextCover)) return;
+        coverUrl = nextCover;
+        Glide.with(this).clear(coverImage);
+        if (coverUrl == null) coverImage.setImageDrawable(MdiIcons.coverPlaceholder(this));
+        else Glide.with(this).load(coverUrl).placeholder(MdiIcons.coverPlaceholder(this))
+                .error(MdiIcons.coverPlaceholder(this)).into(coverImage);
+        ImagePreview.bind(coverImage, coverUrl);
+    }
     @Override protected void render(){
-        selectTab(state.tab);
+        clearWorkCards();
+        clearCommentRows();
+        selectTab(state.tab);renderHeader();
         renderComposer();errors();
         if(!state.ready()){if(state.loading())loadingBlocks(3);else loginRequired();return;}
-        toolbar.setTitle(str(state.channel,"name"));
         if(state.tab==0)overview();else if(state.tab==1)works();else if(state.tab==2)discussion();else if(state.tab==3)subscribers();else if(state.tab==4)manage();else ballots();
     }
     private void overview(){
-        String cover=str(state.channel,"cover_image");if(!cover.isEmpty()){ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);image.setContentDescription(getString(R.string.channel_cover));content.addView(image,new LinearLayout.LayoutParams(-1,dp(170)));Glide.with(this).load(SiteUrls.media(cover)).into(image);}
         heading(content,str(state.channel,"name"));text(content,str(state.channel,"description"));
         text(content,getString(R.string.channel_stats,num(state.channel,"count_works"),num(state.channel,"count_user_fav"),num(state.channel,"count_comments")));
         if(state.deleted())text(content,R.string.channel_deleted);
@@ -99,33 +162,64 @@ public class ChannelActivity extends ModuleActivity {
     }
     private String folderLabel(JsonObject f){return getString(R.string.channel_folder_info,str(f,"name"),num(f,"count_works"),getString(bool(f,"is_public")?R.string.channel_public:R.string.channel_private));}
     private void works(){
-        folderSelect();field(content,R.string.channel_work_search,state.draft("work_query"),InputType.TYPE_CLASS_TEXT,value->state.draft("work_query",value));
-        button(content,R.string.channel_search_works,"search",false,false,()->state.searchWorks(state.draft("work_query")));
+        folderSelect();workSearchBar();
         if(state.canAdd())button(content,R.string.channel_add_work,"add_work",false,true,()->form("add_work",R.string.channel_add_work,ModuleFormDialog.field("work_id",R.string.channel_work_id,"")));
         JsonObject active=state.activeBallot();if(num(active,"id")>0){text(content,getString(R.string.channel_ballot_info,num(obj(active,"config"),"min_votes_per_user"),num(obj(active,"config"),"max_votes_per_user"),num(obj(active,"config"),"bits_cost")));button(content,R.string.channel_ballot_results,"ballot",false,false,()->state.openBallot(num(active,"id")));}
+        if(state.rows().size()==0&&state.loading("page")&&!state.errors.containsKey("page")){loadingBlocks(3);return;}
         if(state.rows().size()==0&&!state.loading("page"))text(content,R.string.modules_empty);
+        Gson gson=new Gson();
         for(JsonElement value:state.rows()){
-            JsonObject work=obj(value);int id=num(work,"id");LinearLayout box=column(content);String title=str(work,"title");boolean pinned=contains(array(state.pageData,"pinned_work_ids"),id);
-            heading(box,pinned?getString(R.string.channel_pinned,title):title).setOnClickListener(v->openWork(id));
-            user(box,obj(work,"user"));String intro=str(work,"intro");if(!intro.isEmpty())text(box,intro);
+            JsonObject work=obj(value);int id=num(work,"id");if(id<=0)continue;
+            String title=str(work,"title");boolean pinned=contains(array(state.pageData,"pinned_work_ids"),id);
+            Topic topic=gson.fromJson(work,Topic.class);
+            if(pinned)topic.setTitle(getString(R.string.channel_pinned,title));
+            View card=getLayoutInflater().inflate(R.layout.grid_item_topic,content,false);
+            TopicAdapter.bindCard(card,new TopicViewItem(topic));
+            content.addView(card);workCards.add(card);
+            card.setEnabled(!state.busy());
+            card.findViewById(R.id.authorTextView).setOnClickListener(view->openUser(obj(work,"user")));
+            LinearLayout box=card.findViewById(R.id.topicCardContent);
             if(state.canVote(state.activeDetail,id)||state.hasBallotVote(state.activeDetail,id)){
                 boolean voted=state.hasBallotVote(state.activeDetail,id);
                 MaterialButton vote=reaction(box,getString(voted?R.string.channel_ballot_voted:R.string.channel_ballot_vote),"cast:"+id,voted?"check-circle":"vote-outline",voted,()->voteConfirm(state.activeDetail,id));vote.setEnabled(!state.busy()&&!voted&&state.canVote(state.activeDetail,id));
             }
-            List<String> labels=new ArrayList<>();List<Runnable> actions=new ArrayList<>();
-            labels.add(getString(R.string.recycle_view));actions.add(()->openWork(id));
-            if(state.manager()&&!state.deleted()&&state.folder>=0){labels.add(getString(pinned?R.string.channel_unpin_work:R.string.channel_pin_work));actions.add(()->state.work(Route.PIN_WORK,id,state.folder,!pinned));
-                labels.add(getString(R.string.channel_copy_work));actions.add(()->copyWork(id));}
-            if(state.canRemove(work)){labels.add(getString(R.string.channel_remove_work));actions.add(()->confirm(getString(R.string.channel_remove_work_confirm,title),()->state.work(Route.REMOVE_WORK,id,state.folder,null)));}
-            button(box,R.string.common_more,Route.PIN_WORK.name()+":"+id,false,false,()->menu(labels.toArray(new String[0]),i->actions.get(i).run()));
         }
         pager(state.page,state.pages(),state::load);
     }
-    private void copyWork(int id){List<String> labels=new ArrayList<>();List<Integer> ids=new ArrayList<>();labels.add(getString(R.string.channel_no_folder));ids.add(0);
-        for(JsonElement e:state.folders){labels.add(str(obj(e),"name"));ids.add(num(obj(e),"id"));}
-        menu(labels.toArray(new String[0]),i->state.work(Route.ADD_WORK,id,ids.get(i),null));
+    private void workSearchBar() {
+        View bar = getLayoutInflater().inflate(R.layout.view_channel_search, content, false);
+        TextInputLayout layout = bar.findViewById(R.id.channelSearchInputLayout);
+        layout.setHint(getString(R.string.channel_work_search));
+        TextInputEditText query = bar.findViewById(R.id.channelSearchInput);
+        MaterialButton submit = bar.findViewById(R.id.channelSearchButton);
+        query.setTag("module_field:" + R.string.channel_work_search);
+        query.setSaveEnabled(false); query.setText(state.draft("work_query"));
+        query.setEnabled(!state.busy()); submit.setEnabled(!state.busy());
+        watch(query, value -> state.draft("work_query", value));
+        submit.setOnClickListener(view -> searchWorks(query));
+        query.setOnEditorActionListener((view, action, event) -> {
+            if (action == EditorInfo.IME_ACTION_SEARCH || action == EditorInfo.IME_ACTION_DONE) {
+                searchWorks(query); return true;
+            }
+            return false;
+        });
+        content.addView(bar);
+    }
+    private void searchWorks(TextInputEditText query) {
+        if (state.busy()) return;
+        query.clearFocus();
+        InputMethodManager keyboard = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(query.getWindowToken(), 0);
+        state.searchWorks(state.draft("work_query"));
+    }
+    private void clearWorkCards() {
+        for (View card : workCards) TopicAdapter.clearCard(card);
+        workCards.clear();
     }
     private void discussion(){
+        TextView title=heading(content,getString(R.string.comments_count,state.total));
+        title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge);
+        title.setAccessibilityHeading(true);
         List<String> labels=new ArrayList<>(),values=new ArrayList<>();labels.add(getString(R.string.channel_comment_tag_filter));values.add("");
         for(JsonElement e:state.tags){String tag=str(obj(e),"tag");labels.add(tag);values.add(tag);}
         select(content,labels,Math.max(0,values.indexOf(state.commentFilter)),i->state.filter(values.get(i)));
@@ -136,26 +230,113 @@ public class ChannelActivity extends ModuleActivity {
             button(content,R.string.account_title,"account",false,false,()->startActivity(new Intent(this,AccountActivity.class).putExtra(AccountActivity.EXTRA_TAB,1)));
         }
         if(state.locatingComment())text(content,R.string.channel_comment_locating);
-        if(state.rows().size()==0&&!state.loading("page"))text(content,R.string.modules_empty);
-        for(JsonElement value:state.rows()){
-            JsonObject comment=obj(value);int id=num(comment,"id");LinearLayout box=column(content);box.setTag("comment:"+id);
-            String name=str(obj(comment,"user"),"username");text(box,getString(R.string.channel_comment_meta,name,id,str(comment,"created_at"))).setOnClickListener(v->openUser(obj(comment,"user")));
-            if(num(comment,"reply_comment_id")>0)text(box,getString(R.string.channel_comment_reply_to,num(comment,"reply_comment_id"))).setOnClickListener(v->state.locate(num(comment,"reply_comment_id")));
-            if(num(comment,"status_del")!=0){text(box,R.string.channel_comment_deleted);continue;}
-            rich(box,str(comment,"content"));String tagText=ChannelModel.joinTags(array(comment,"tags"));if(!tagText.isEmpty())text(box,tagText);
-            LinearLayout actions=row(box);int vote=state.commentVote(id);
-            reaction(actions,Integer.toString(num(comment,"count_upvote")),"comment:"+id+":1",vote==1?"thumb-up":"thumb-up-outline",vote==1,()->state.voteComment(id,1)).setEnabled(!state.busy()&&!state.deleted());
-            reaction(actions,Integer.toString(num(comment,"count_downvote")),"comment:"+id+":2",vote==2?"thumb-down":"thumb-down-outline",vote==2,()->state.voteComment(id,2)).setEnabled(!state.busy()&&!state.deleted());
-            button(box,R.string.channel_reply,"reply",false,true,()->{if(state.canCompose()){state.reply(comment);focusInput();}}).setEnabled(!state.busy()&&(!state.signedIn()||state.canCompose()));
-            button(box,R.string.common_more,"comment_more",false,false,()->commentMenu(comment));
+        if(state.rows().size()==0&&state.loading("page")&&!state.errors.containsKey("page")){
+            ShimmerSkeletonView skeleton=new ShimmerSkeletonView(this);
+            skeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.COMMENTS);
+            content.addView(skeleton,new LinearLayout.LayoutParams(-1,dp(420)));return;
         }
+        if(state.rows().size()==0&&!state.loading("page")&&!state.errors.containsKey("page")){
+            TextView empty=text(content,R.string.comments_empty_pull);
+            empty.setGravity(Gravity.CENTER);empty.setPadding(dp(24),dp(24),dp(24),dp(24));
+        }
+        for(JsonElement value:state.rows())commentRow(obj(value));
         pager(state.page,state.pages(),state::load);
         if(state.history!=null){heading(content,getString(R.string.channel_comment_history));for(JsonElement e:state.history){JsonObject h=obj(e);text(content,str(h,"created_at"));rich(content,str(h,"previous_content"));}}
+    }
+    private void commentRow(JsonObject comment) {
+        int id = num(comment, "id");
+        if (id <= 0) return;
+        View row = getLayoutInflater().inflate(R.layout.item_comment, content, false);
+        row.setTag("comment:" + id); content.addView(row); commentRows.add(row);
+        JsonObject author = obj(comment, "user");
+        ImageView avatar = row.findViewById(R.id.ivAvatar);
+        TextView name = row.findViewById(R.id.tvUserName);
+        String username = str(author, "username");
+        name.setText(username.isEmpty() ? getString(R.string.profile_unknown_user) : username);
+        View.OnClickListener openAuthor = view -> openUser(author);
+        avatar.setOnClickListener(openAuthor); name.setOnClickListener(openAuthor);
+        Glide.with(this).load(SiteUrls.media(str(author, "avatar"))).transform(new CircleCrop())
+                .placeholder(MdiIcons.drawable(this, "account")).error(MdiIcons.drawable(this, "account")).into(avatar);
+        TextView time = row.findViewById(R.id.tvTime);
+        time.setText(commentTime(str(comment, "created_at")));
+        int replyId = num(comment, "reply_comment_id");
+        TextView reference = row.findViewById(R.id.tvChapter);
+        reference.setText(getString(R.string.channel_comment_context, id,
+                replyId > 0 ? getString(R.string.comments_reply_to, replyId) : ""));
+        if (replyId > 0) reference.setOnClickListener(view -> state.locate(replyId));
+        TextView body = row.findViewById(R.id.tvContent);
+        if (num(comment, "status_del") != 0) {
+            body.setText(R.string.channel_comment_deleted);
+            row.findViewById(R.id.commentActions).setVisibility(View.GONE); return;
+        }
+        BbCodeRendering.setText(renderer, body, str(comment, "content"));
+        String tagText = ChannelModel.joinTags(array(comment, "tags"));
+        if (!tagText.isEmpty()) {
+            TextView tags = new TextView(this); tags.setText(tagText);
+            tags.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelSmall);
+            tags.setTextColor(com.google.android.material.color.MaterialColors.getColor(tags, com.google.android.material.R.attr.colorOnSurfaceVariant));
+            LinearLayout details = (LinearLayout) body.getParent();
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2); params.topMargin = dp(8);
+            details.addView(tags, details.indexOfChild(body) + 1, params);
+        }
+        TextView edited = row.findViewById(R.id.commentEdited);
+        String editedAt = str(comment, "edited_at");
+        edited.setVisibility(!editedAt.isEmpty() && !editedAt.equals(str(comment, "created_at")) ? View.VISIBLE : View.GONE);
+        edited.setEnabled(!state.busy()); edited.setOnClickListener(view -> state.history(id));
+        row.findViewById(R.id.commentFavorite).setVisibility(View.GONE);
+        row.findViewById(R.id.commentStar).setVisibility(View.GONE);
+        bindCommentVote(row.findViewById(R.id.commentLike), comment, 1);
+        bindCommentVote(row.findViewById(R.id.commentDislike), comment, 2);
+        MaterialButton reply = row.findViewById(R.id.commentReply);
+        reply.setEnabled(!state.busy() && (!state.signedIn() || state.canCompose()));
+        reply.setOnClickListener(view -> {
+            if (state.busy()) return;
+            if (!state.signedIn()) startActivity(new Intent(this, LoginActivity.class));
+            else if (state.canCompose()) { state.reply(comment); focusInput(); }
+        });
+        MaterialButton more = row.findViewById(R.id.commentMore);
+        more.setEnabled(!state.busy()); more.setOnClickListener(view -> commentMenu(comment));
+        ButtonLoadingIcon loading = new ButtonLoadingIcon(); commentIcons.add(loading);
+        loading.bind(more, "dots-horizontal", false, state.action.equals("delete_comment:" + id));
+    }
+    private void bindCommentVote(MaterialButton button, JsonObject comment, int operation) {
+        int id = num(comment, "id"); boolean active = state.commentVote(id) == operation;
+        String icon = operation == 1 ? "thumb-up" : "thumb-down";
+        button.setText(Integer.toString(num(comment, operation == 1 ? "count_upvote" : "count_downvote")));
+        button.setEnabled(!state.busy() && !state.deleted());
+        ButtonLoadingIcon loading = new ButtonLoadingIcon(); commentIcons.add(loading);
+        loading.bind(button, active ? icon : icon + "-outline", active, state.action.equals("comment:" + id + ":" + operation));
+        button.setOnClickListener(view -> {
+            if (state.busy() || state.deleted()) return;
+            if (!state.signedIn()) startActivity(new Intent(this, LoginActivity.class));
+            else state.voteComment(id, operation);
+        });
+    }
+    private String commentTime(String value) {
+        try {
+            return java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.systemDefault())
+                    .format(java.time.format.DateTimeFormatter.ofPattern(getString(R.string.common_date_time)));
+        } catch (RuntimeException ignored) { return value; }
+    }
+    private void clearCommentRows() {
+        for (ButtonLoadingIcon icon : commentIcons) icon.close();
+        commentIcons.clear();
+        for (View row : commentRows) {
+            ImageView avatar = row.findViewById(R.id.ivAvatar);
+            Glide.with(getApplicationContext()).clear(avatar);
+            ((TextView) row.findViewById(R.id.tvContent)).setText(null);
+        }
+        commentRows.clear();
     }
     @Override protected void afterRender(){
         if(state.tab==2&&state.focusComment>0){
             View target=content.findViewWithTag("comment:"+state.focusComment);
-            if(target!=null){state.focusComment=0;scroll.smoothScrollTo(0,target.getTop());}
+            if(target!=null){
+                state.focusComment=0;
+                Rect bounds=new Rect();target.getDrawingRect(bounds);
+                scroll.offsetDescendantRectToMyCoords(target,bounds);
+                scroll.smoothScrollTo(0,Math.max(0,bounds.top-scroll.getPaddingTop()));
+            }
         }
     }
     private void commentMenu(JsonObject comment){
@@ -225,10 +406,26 @@ public class ChannelActivity extends ModuleActivity {
         boolean voted=state.hasBallotVote(detail,id);if(voted||state.canVote(detail,id))reaction(box,getString(voted?R.string.channel_ballot_voted:R.string.channel_ballot_vote),"cast:"+id,voted?"check-circle":"vote-outline",voted,()->voteConfirm(detail,id)).setEnabled(!state.busy()&&!voted&&state.canVote(detail,id));}
     private void voteConfirm(JsonObject detail,int workId){confirm(getString(R.string.channel_ballot_vote_confirm,workId,num(obj(obj(detail,"ballot"),"config"),"bits_cost")),()->state.cast(detail,workId));}
     private void composer(){
-        context=new TextView(this);footer.addView(context);input=new TextInputEditText(this);input.setHint(R.string.channel_comment_hint);input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);input.setMinLines(1);input.setMaxLines(4);footer.addView(input,new LinearLayout.LayoutParams(-1,-2));
+        context=new TextView(this);footer.addView(context);
+        View bar=getLayoutInflater().inflate(R.layout.view_work_comment_composer,footer,false);
+        bar.setVisibility(View.VISIBLE);footer.addView(bar);
+        TextInputLayout layout=bar.findViewById(R.id.commentComposerInputLayout);
+        layout.setHint(getString(R.string.channel_comment_hint));
+        input=bar.findViewById(R.id.commentComposerInput);
+        send=bar.findViewById(R.id.commentComposerSend);
+        emoji=bar.findViewById(R.id.commentComposerEmoji);
         input.setSaveEnabled(false);
         watch(input,value->{if(!bindingComposer){state.draft("comment",value);if(send!=null)send.setEnabled(!state.busy()&&!value.trim().isEmpty());}});LinearLayout line=row(footer);
-        send=new MaterialButton(this,null,com.google.android.material.R.attr.borderlessButtonStyle);send.setText(R.string.channel_comment_send);line.addView(send);send.setOnClickListener(v->state.sendComment());
+        send.setOnClickListener(v->state.sendComment());
+        input.setOnEditorActionListener((view,action,event)->{
+            if(action==EditorInfo.IME_ACTION_SEND||action==EditorInfo.IME_ACTION_DONE){state.sendComment();return true;}
+            return false;
+        });
+        emoji.setOnClickListener(v->FtemojiPicker.show(this,name->{
+            if(state.busy()||!state.canCompose()||input.getText()==null)return;
+            int start=Math.max(0,input.getSelectionStart()),end=Math.max(0,input.getSelectionEnd());
+            input.getText().replace(Math.min(start,end),Math.max(start,end),":ftemoji_"+name+":");
+        }));
         commentTags=new MaterialButton(this,null,com.google.android.material.R.attr.borderlessButtonStyle);commentTags.setText(R.string.channel_comment_tags);line.addView(commentTags);commentTags.setOnClickListener(v->form("comment_tags",R.string.channel_comment_tags,ModuleFormDialog.field("tags",R.string.channel_comment_tags,state.draft("comment_tags"))));
         cancel=new MaterialButton(this,null,com.google.android.material.R.attr.borderlessButtonStyle);cancel.setText(R.string.common_cancel);line.addView(cancel);cancel.setOnClickListener(v->state.cancelContext());
     }
@@ -237,8 +434,9 @@ public class ChannelActivity extends ModuleActivity {
         if(!input.getText().toString().equals(state.draft("comment"))){input.setText(state.draft("comment"));input.setSelection(input.length());}
         boolean editing=!state.draft("editing").isEmpty(),reply=!state.draft("reply").isEmpty();
         context.setText(editing?getString(R.string.channel_editing_comment,ChannelModel.number(state.draft("editing"))):reply?getString(R.string.channel_replying,state.draft("reply_name"),ChannelModel.number(state.draft("reply"))):"");context.setVisibility(editing||reply?View.VISIBLE:View.GONE);
-        cancel.setVisibility(editing||reply?View.VISIBLE:View.GONE);input.setEnabled(!state.busy());send.setEnabled(!state.busy()&&!state.draft("comment").trim().isEmpty());commentTags.setEnabled(!state.busy());cancel.setEnabled(!state.busy());
-        send.setText(editing?R.string.channel_comment_save:R.string.channel_comment_send);sendIcon.bind(send,"send",false,state.action.equals("send"));bindingComposer=false;
+        cancel.setVisibility(editing||reply?View.VISIBLE:View.GONE);input.setEnabled(!state.busy());send.setEnabled(!state.busy()&&!state.draft("comment").trim().isEmpty());emoji.setEnabled(!state.busy());commentTags.setEnabled(!state.busy());cancel.setEnabled(!state.busy());
+        send.setText(null);send.setContentDescription(getString(editing?R.string.channel_comment_save:R.string.channel_comment_send));
+        sendIcon.bind(send,editing?"content-save":"send",false,state.action.equals("send"));bindingComposer=false;
     }
     private void focusInput(){footer.setVisibility(View.VISIBLE);input.requestFocus();input.post(()->((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(input,InputMethodManager.SHOW_IMPLICIT));}
     @Override protected boolean onForm(String key,JsonObject values){
@@ -282,5 +480,10 @@ public class ChannelActivity extends ModuleActivity {
     private void openUser(JsonObject user){String name=str(user,"username");if(!name.isEmpty())startActivity(new Intent(this,UserDetailActivity.class).putExtra(UserDetailActivity.EXTRA_USERNAME,name));}
     private void user(LinearLayout parent,JsonObject user){String name=str(user,"username");if(!name.isEmpty())text(parent,name).setOnClickListener(v->openUser(user));}
     private void rich(LinearLayout parent,String source){if(!source.isEmpty())BbCodeRendering.setText(renderer,text(parent,""),source);}
-    @Override protected void onDestroy(){sendIcon.close();super.onDestroy();}
+    @Override protected void onDestroy(){
+        clearWorkCards();
+        clearCommentRows();
+        if(toolbarElevationAnimator!=null)toolbarElevationAnimator.cancel();
+        sendIcon.close();super.onDestroy();
+    }
 }

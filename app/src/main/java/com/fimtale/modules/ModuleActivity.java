@@ -38,7 +38,10 @@ public abstract class ModuleActivity extends AppCompatActivity {
     private int selectedTab, sessionRevision;
     private long communityRevision;
     protected void bind(ModuleModel state, int title) {
-        model = state; setContentView(R.layout.activity_modules);
+        bind(state, title, R.layout.activity_modules);
+    }
+    protected void bind(ModuleModel state, int title, int layout) {
+        model = state; setContentView(layout);
         com.fimtale.utils.EditorWindowStyle.apply(this);
         sessionRevision = state.sessionRevision;
         communityRevision = com.fimtale.community.Community.version();

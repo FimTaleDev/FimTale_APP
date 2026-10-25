@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <com.fimtale.ui.PullRefreshLayout
+            android:id="@+id/modulesSwipeRefresh"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/modulesScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingTop="88dp"
+                android:clipToPadding="false"
+                android:fillViewport="true"
+                android:overScrollMode="always">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="220dp"
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp">
+
+                        <ImageView
+                            android:id="@+id/channelCoverImage"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.tabs.TabLayout
+                        android:id="@+id/modulesTabs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?android:attr/colorBackground"
+                        app:tabMode="fixed"
+                        app:tabGravity="center" />
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/modulesProgress"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:indeterminate="true"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/modulesContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingTop="16dp" />
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+        </com.fimtale.ui.PullRefreshLayout>
+
+        <LinearLayout
+            android:id="@+id/modulesFooter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp" />
+    </LinearLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/channelToolbarContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_margin="16dp"
+        app:cardBackgroundColor="?android:attr/colorBackground"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp">
+
+        <com.fimtale.ui.icons.MdiToolbar
+            android:id="@+id/modulesToolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:mdiNavigationIcon="arrow-left"
+            app:titleTextColor="?attr/colorOnSurface"
+            app:navigationIconTint="?attr/colorOnSurface" />
+    </com.google.android.material.card.MaterialCardView>
+</FrameLayout>
