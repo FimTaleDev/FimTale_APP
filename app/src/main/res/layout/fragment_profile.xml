@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="24dp"
-            android:background="?attr/colorSurface"
+            android:background="?android:attr/colorBackground"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground">
@@ -74,7 +74,7 @@
             android:layout_height="wrap_content"
             android:paddingTop="16dp"
             android:paddingBottom="16dp"
-            android:background="?attr/colorSurface"
+            android:background="?android:attr/colorBackground"
             android:layout_marginTop="8dp">
 
             <androidx.constraintlayout.helper.widget.Flow

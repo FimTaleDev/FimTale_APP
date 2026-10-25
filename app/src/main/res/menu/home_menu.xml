@@ -1,4 +1,4 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/action_notifications" android:title="@string/inbox_title" app:showAsAction="always" app:iconTint="?attr/colorControlNormal"/>
-    <item android:id="@+id/action_search" android:title="@string/search_title" app:showAsAction="always" app:iconTint="?attr/colorControlNormal"/>
+    <item android:id="@+id/action_notifications" android:title="@string/inbox_title" app:showAsAction="always" app:iconTint="@color/app_bar_on_surface"/>
+    <item android:id="@+id/action_search" android:title="@string/search_title" app:showAsAction="always" app:iconTint="@color/app_bar_on_surface"/>
 </menu>

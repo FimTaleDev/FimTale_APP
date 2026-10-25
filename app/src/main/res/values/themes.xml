@@ -28,6 +28,20 @@
         <item name="colorSurfaceVariant">@color/md_theme_light_surfaceVariant</item>
         <item name="colorOnSurfaceVariant">@color/md_theme_light_onSurfaceVariant</item>
         <item name="colorOutline">@color/md_theme_light_outline</item>
+        <item name="colorOutlineVariant">@color/md_theme_light_outlineVariant</item>
+        <item name="colorSurfaceBright">@color/md_theme_light_surfaceBright</item>
+        <item name="colorSurfaceDim">@color/md_theme_light_surfaceDim</item>
+        <item name="colorSurfaceContainerLowest">@color/md_theme_light_surfaceContainerLowest</item>
+        <item name="colorSurfaceContainerLow">@color/md_theme_light_surfaceContainerLow</item>
+        <item name="colorSurfaceContainer">@color/md_theme_light_surfaceContainer</item>
+        <item name="colorSurfaceContainerHigh">@color/md_theme_light_surfaceContainerHigh</item>
+        <item name="colorSurfaceContainerHighest">@color/md_theme_light_surfaceContainerHighest</item>
+        <item name="colorSurfaceInverse">@color/md_theme_light_surfaceInverse</item>
+        <item name="colorOnSurfaceInverse">@color/md_theme_light_onSurfaceInverse</item>
+        <item name="colorPrimaryInverse">@color/md_theme_light_primaryInverse</item>
+        <item name="android:textColorLink">?attr/colorSecondary</item>
+        <!-- Keep elevated controls on the neutral ft-front surfaces. -->
+        <item name="elevationOverlayEnabled">false</item>
         <item name="textInputStyle">@style/Widget.Fimtale.TextInputLayout</item>
         <!-- Match fitted pages; transparent navigation bars are reserved for edge-to-edge windows. -->
         <item name="android:navigationBarColor">?android:attr/colorBackground</item>
@@ -56,8 +70,9 @@
     </style>
 
     <style name="Theme.Fimtale.MainActivity" parent="Theme.Fimtale.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/app_bar_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/navigation_surface</item>
     </style>
 
     <style name="Theme.Fimtale.FullTransparent" parent="Theme.Fimtale.NoActionBar">
@@ -81,6 +96,7 @@
     </style>
 
     <style name="Widget.Fimtale.TextInputLayout" parent="Widget.Material3.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">?attr/colorSurfaceVariant</item>
         <item name="boxStrokeWidth">0dp</item>
         <item name="boxStrokeWidthFocused">0dp</item>
         <item name="boxCornerRadiusTopStart">@dimen/input_corner_radius</item>

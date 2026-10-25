@@ -11,7 +11,8 @@
     <com.fimtale.ui.icons.MdiToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize">
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/app_bar_background">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -24,7 +25,7 @@
                 android:layout_width="@dimen/mdi_icon_size"
                 android:layout_height="@dimen/mdi_icon_size"
                 android:contentDescription="@null"
-                app:tint="?attr/colorOnSurface" />
+                app:tint="@color/app_bar_on_surface" />
 
             <TextView
                 android:id="@+id/toolbar_title"
@@ -32,7 +33,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:textAppearance="?attr/textAppearanceTitleLarge"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="@color/app_bar_on_surface" />
         </LinearLayout>
     </com.fimtale.ui.icons.MdiToolbar>
 
@@ -48,6 +49,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:menu="@menu/bottom_nav_menu"
-        android:background="@android:color/transparent" />
+        android:background="@color/navigation_surface" />
 
 </LinearLayout>

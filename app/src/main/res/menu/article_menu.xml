@@ -5,5 +5,5 @@
         android:id="@+id/action_filter"
         android:title="@string/filters_preset_title"
         app:showAsAction="ifRoom"
-        app:iconTint="?attr/colorControlNormal" />
+        app:iconTint="@color/app_bar_on_surface" />
 </menu>

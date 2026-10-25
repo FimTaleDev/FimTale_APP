@@ -1,3 +1,3 @@
 <resources>
-    <color name="message_chat_background">#F2F2F2</color>
+    <color name="message_chat_background">@color/card_background</color>
 </resources>

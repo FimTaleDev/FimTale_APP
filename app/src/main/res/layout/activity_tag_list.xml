@@ -71,8 +71,7 @@
                     android:layout_height="?attr/actionBarSize"
                     app:title="@string/tags_list_title"
                     app:titleTextColor="?attr/colorOnSurface"
-                    app:navigationIconTint="?attr/colorOnSurface"
-                    app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+                    app:navigationIconTint="?attr/colorOnSurface" />
             </com.google.android.material.card.MaterialCardView>
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>

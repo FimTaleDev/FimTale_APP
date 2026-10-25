@@ -41,6 +41,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar.getOverflowIcon() != null) {
+            toolbar.getOverflowIcon().setTint(getColor(R.color.app_bar_on_surface));
+        }
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayShowTitleEnabled(false);

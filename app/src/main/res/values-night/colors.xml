@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="card_background">#171212</color>
+    <color name="card_background">@color/md_theme_dark_surface</color>
+    <color name="app_bar_background">@color/md_theme_dark_surface</color>
+    <color name="navigation_surface">@color/md_theme_dark_surface</color>
 </resources>

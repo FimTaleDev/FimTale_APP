@@ -4,9 +4,11 @@
     <item
         android:id="@+id/action_toggle_theme"
         android:title="@string/settings_toggle_theme"
+        app:iconTint="@color/app_bar_on_surface"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_settings"
         android:title="@string/settings_title"
+        app:iconTint="@color/app_bar_on_surface"
         app:showAsAction="ifRoom" />
 </menu>

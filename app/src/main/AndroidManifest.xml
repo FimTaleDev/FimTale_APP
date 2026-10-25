@@ -24,7 +24,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Fimtale.FullTransparent">
+            android:theme="@style/Theme.Fimtale.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

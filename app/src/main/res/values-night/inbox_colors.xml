@@ -1,3 +1,3 @@
 <resources>
-    <color name="message_chat_background">#181818</color>
+    <color name="message_chat_background">@color/md_theme_dark_background</color>
 </resources>

@@ -312,8 +312,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="?attr/actionBarSize"
                         app:titleTextColor="?attr/colorOnSurface"
-                        app:navigationIconTint="?attr/colorOnSurface"
-                        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+                        app:navigationIconTint="?attr/colorOnSurface" />
                 </com.google.android.material.card.MaterialCardView>
 
             </com.google.android.material.appbar.CollapsingToolbarLayout>
