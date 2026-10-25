@@ -2,6 +2,11 @@ package com.fimtale.ui;
 
 
 import com.fimtale.utils.MdiIcons;
+import android.graphics.Rect;
+import androidx.annotation.NonNull;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsAnimationCompat;
 
 import android.content.Context;
 import android.content.Intent;
@@ -58,11 +63,16 @@ public final class ReaderCommentsPanel {
     private boolean loading;
     private boolean sending;
     private boolean closed;
+    private final int paddingLeft, paddingTop, paddingRight, paddingBottom;
+    private final java.util.Set<WindowInsetsAnimationCompat> imeAnimations = new java.util.HashSet<>();
+    private final View.OnLayoutChangeListener imeLayoutListener;
 
     public ReaderCommentsPanel(AppCompatActivity activity, View root, int workId) {
         this.activity = activity;
         this.root = root;
         this.workId = workId;
+        paddingLeft = root.getPaddingLeft(); paddingTop = root.getPaddingTop();
+        paddingRight = root.getPaddingRight(); paddingBottom = root.getPaddingBottom();
         list = root.findViewById(R.id.readerCommentsList);
         pageError = PageErrorView.wrap(list);
         list.setLayoutManager(new LinearLayoutManager(activity));
@@ -90,6 +100,29 @@ public final class ReaderCommentsPanel {
             if (closed || sending) return;
             replyInput.reply(comment, workId); replyInput.focus();
         });
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            if (imeAnimations.isEmpty()) applyKeyboardInsets(insets);
+            return insets;
+        });
+        ViewCompat.setWindowInsetsAnimationCallback(root,
+                new WindowInsetsAnimationCompat.Callback(WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                    @Override public void onPrepare(@NonNull WindowInsetsAnimationCompat animation) {
+                        if ((animation.getTypeMask() & WindowInsetsCompat.Type.ime()) != 0) imeAnimations.add(animation);
+                    }
+                    @NonNull @Override public WindowInsetsCompat onProgress(@NonNull WindowInsetsCompat insets,
+                            @NonNull java.util.List<WindowInsetsAnimationCompat> running) {
+                        applyKeyboardInsets(insets); return insets;
+                    }
+                    @Override public void onEnd(@NonNull WindowInsetsAnimationCompat animation) {
+                        imeAnimations.remove(animation);
+                        if (imeAnimations.isEmpty()) applyKeyboardInsets(ViewCompat.getRootWindowInsets(root));
+                    }
+                });
+        imeLayoutListener = (view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (imeAnimations.isEmpty()) applyKeyboardInsets(ViewCompat.getRootWindowInsets(root));
+        };
+        root.addOnLayoutChangeListener(imeLayoutListener);
+        ViewCompat.requestApplyInsets(root);
 
         refresh.setOnChildScrollUpCallback((parent, child) -> closed || loading || list.canScrollVertically(-1));
         refresh.setOnRefreshListener(() -> load(1));
@@ -115,7 +148,7 @@ public final class ReaderCommentsPanel {
     public void setWorkAuthor(int authorId) { adapter.setWorkAuthor(authorId); }
 
     public void bind(int chapterId) {
-        if (closed || chapterId < 0) return;
+        if (closed || chapterId < 0 || this.chapterId == chapterId) return;
         if (this.chapterId != chapterId) {
             if (commentCall != null) { commentCall.cancel(); finishSubmit(); }
             adapter.updateData(new ArrayList<>());
@@ -279,8 +312,26 @@ public final class ReaderCommentsPanel {
         if (manager != null) manager.hideSoftInputFromWindow(input.getWindowToken(), 0);
     }
 
+    private void applyKeyboardInsets(WindowInsetsCompat insets) {
+        if (closed || insets == null || root.getHeight() <= 0) return;
+        int overlap = 0;
+        int imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+        if (imeBottom > 0) {
+            Rect window = activity.getWindowManager().getCurrentWindowMetrics().getBounds();
+            int keyboardTop = window.bottom - imeBottom;
+            int[] location = new int[2]; root.getLocationOnScreen(location);
+            overlap = Math.max(0, location[1] + root.getHeight() - keyboardTop);
+        }
+        root.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + overlap);
+    }
+
     public void close() {
+        if (closed) return;
         closed = true;
+        root.removeOnLayoutChangeListener(imeLayoutListener);
+        ViewCompat.setOnApplyWindowInsetsListener(root, null);
+        ViewCompat.setWindowInsetsAnimationCallback(root, null);
+        root.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
         replyInput.close();
         if (activeCall != null) activeCall.cancel();
         if (commentCall != null) { commentCall.cancel(); finishSubmit(); }

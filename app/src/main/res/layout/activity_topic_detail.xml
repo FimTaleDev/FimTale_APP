@@ -17,6 +17,7 @@
             android:overScrollMode="always">
 
             <LinearLayout
+                android:id="@+id/workDetailContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -246,23 +247,31 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
-        <LinearLayout
-            android:id="@+id/readingActionsBar"
+        <FrameLayout
+            android:id="@+id/workBottomActions"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_gravity="bottom" android:layout_margin="16dp"
-            android:orientation="horizontal" android:gravity="center_vertical"
-            android:visibility="gone" tools:visibility="visible">
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/startReadingButton"
-                android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="@string/reader_start_reading"/>
-            <com.fimtale.ui.icons.MdiButton
-                android:id="@+id/showChaptersButton" style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginStart="12dp" android:text="@string/reader_catalog"
-                android:visibility="gone" tools:visibility="visible"
-                android:contentDescription="@string/reader_view_catalog" app:iconSize="@dimen/mdi_icon_size" app:mdiIcon="book-open-page-variant"/>
-        </LinearLayout>
+            android:padding="8dp" android:background="@android:color/transparent"
+            android:visibility="gone" tools:visibility="visible"
+            android:elevation="0dp">
+            <LinearLayout
+                android:id="@+id/readingActionsBar"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/startReadingButton"
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="@string/reader_start_reading"/>
+                <com.fimtale.ui.icons.MdiButton
+                    android:id="@+id/showChaptersButton" style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp" android:text="@string/reader_catalog"
+                    android:visibility="gone" tools:visibility="visible"
+                    android:contentDescription="@string/reader_view_catalog" app:iconSize="@dimen/mdi_icon_size" app:mdiIcon="book-open-page-variant"/>
+            </LinearLayout>
+            <include layout="@layout/view_work_comment_composer" />
+        </FrameLayout>
 
         <com.fimtale.ui.ShimmerSkeletonView
             android:id="@+id/detailLoadingSkeleton"

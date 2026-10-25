@@ -34,6 +34,8 @@ import androidx.core.view.ViewCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.transition.TransitionManager;
+import com.google.android.material.transition.MaterialFadeThrough;
 
 import com.fimtale.adapter.ChapterAdapter;
 import com.fimtale.model.AuthorInfo;
@@ -126,6 +128,8 @@ public class TopicDetailActivity extends AppCompatActivity {
     private NestedScrollView scrollView;
     private Button startReadingButton;
     private View readingActionsBar;
+    private android.widget.FrameLayout bottomActions;
+    private LinearLayout detailContent;
     private View commentComposerBar;
     private TextInputEditText commentComposerInput;
     private MaterialButton commentComposerSend;
@@ -268,10 +272,21 @@ public class TopicDetailActivity extends AppCompatActivity {
         scrollView = findViewById(R.id.scrollView);
         startReadingButton = findViewById(R.id.startReadingButton);
         readingActionsBar = findViewById(R.id.readingActionsBar);
+        bottomActions = findViewById(R.id.workBottomActions);
+        detailContent = findViewById(R.id.workDetailContent);
         commentComposerBar = findViewById(R.id.commentComposerBar);
         commentComposerInput = findViewById(R.id.commentComposerInput);
         commentComposerSend = findViewById(R.id.commentComposerSend);
         commentsRoot = findViewById(R.id.workCommentsSection);
+        bottomActions.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (bottomActions.getHeight() > 0) {
+                int padding = bottomActions.getHeight() + Math.round(32 * getResources().getDisplayMetrics().density);
+                detailContent.setPadding(detailContent.getPaddingLeft(), detailContent.getPaddingTop(), detailContent.getPaddingRight(), padding);
+            }
+            scrollView.post(this::updateBottomActionMode);
+        });
+        commentsRoot.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> updateBottomActionMode());
+        scrollView.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> updateBottomActionMode());
         scrollView.setNestedScrollingEnabled(true);
         scrollView.setSmoothScrollingEnabled(true);
         scrollView.setOverScrollMode(View.OVER_SCROLL_ALWAYS);
@@ -320,6 +335,7 @@ public class TopicDetailActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
+        if (bottomActions != null) TransitionManager.endTransitions(bottomActions);
         if (replyInput != null) replyInput.close();
         if (workActions != null) workActions.close();
         if (commentsSection != null) commentsSection.close();
@@ -607,10 +623,7 @@ public class TopicDetailActivity extends AppCompatActivity {
         loadError.setVisibility(View.GONE);
         scrollView.setVisibility(pulling ? View.VISIBLE : View.INVISIBLE);
         if (editableWork == null && getSupportActionBar() != null) getSupportActionBar().setTitle(getString(R.string.work_detail_title));
-        readingActionsBar.setVisibility(View.INVISIBLE);
-        commentMode = false;
-        commentComposerBar.setVisibility(View.GONE);
-        commentComposerBar.setAlpha(1f);
+        if (editableWork == null) bottomActions.setVisibility(View.GONE);
 
         String token = UserPreferences.getToken(this);
         detailCall = RetrofitClient.getInstance().getWorkViewer(token, topicId);
@@ -627,7 +640,10 @@ public class TopicDetailActivity extends AppCompatActivity {
                     com.fimtale.ui.PullToRefresh.finish(scrollView);
                     loadingSkeleton.setVisibility(View.GONE);
                     scrollView.setVisibility(View.VISIBLE);
-                    scrollView.post(() -> { if (!isFinishing() && !isDestroyed()) commentsSection.loadIfVisible(); });
+                    bottomActions.setVisibility(View.VISIBLE);
+                    scrollView.post(() -> {
+                        if (!isFinishing() && !isDestroyed()) { commentsSection.loadIfVisible(); updateBottomActionMode(); }
+                    });
                 } else {
                     showDetailLoadError(com.fimtale.network.ApiErrors.message(response));
                 }
@@ -647,7 +663,7 @@ public class TopicDetailActivity extends AppCompatActivity {
         loadingSkeleton.setVisibility(View.GONE);
         loadError.setVisibility(View.GONE);
         scrollView.setVisibility(View.VISIBLE);
-        if (editableWork != null) readingActionsBar.setVisibility(View.VISIBLE);
+        if (editableWork != null) { bottomActions.setVisibility(View.VISIBLE); updateBottomActionMode(); }
         pageError.show(message, () -> fetchTopicDetail(currentTopicId), editableWork != null);
     }
 
@@ -755,7 +771,7 @@ public class TopicDetailActivity extends AppCompatActivity {
         java.util.List<TopicDetailResponse.ChapterEdge> roots = com.fimtale.model.ChapterNavigation.choices(data, 0);
         firstChapterId = roots.size() == 1 && roots.get(0).to != null ? roots.get(0).to : 0;
         findViewById(R.id.showChaptersButton).setVisibility(data.getMenu().isEmpty() ? View.GONE : View.VISIBLE);
-        setCommentMode(replyInput != null && replyInput.active());
+        setCommentMode(commentMode || (replyInput != null && replyInput.active()) || commentComposerInput.hasFocus());
         if (focusReplyAfterLoad) {
             focusReplyAfterLoad = false; commentsSection.open(); replyInput.focus();
         }
@@ -949,6 +965,7 @@ public class TopicDetailActivity extends AppCompatActivity {
         startReadingButton.setOnClickListener(v -> openReaderFromDetail());
 
         commentComposerSend.setOnClickListener(v -> submitComment());
+        commentComposerInput.setOnFocusChangeListener((view, focused) -> updateBottomActionMode());
         findViewById(R.id.commentComposerEmoji).setOnClickListener(v -> FtemojiPicker.show(this,
                 name -> insertCommentText(":ftemoji_" + name + ":")));
         commentComposerInput.setOnEditorActionListener((v, actionId, event) -> {
@@ -983,7 +1000,9 @@ public class TopicDetailActivity extends AppCompatActivity {
         android.graphics.Rect viewport = new android.graphics.Rect();
         android.graphics.Rect comments = new android.graphics.Rect();
         if (!scrollView.getGlobalVisibleRect(viewport)) return;
-        int threshold = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24,
+        android.graphics.Rect actions = new android.graphics.Rect();
+        if (bottomActions.getGlobalVisibleRect(actions)) viewport.bottom = Math.min(viewport.bottom, actions.top);
+        int threshold = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, commentMode ? 8 : 24,
                 getResources().getDisplayMetrics());
         setCommentMode(commentsRoot.getGlobalVisibleRect(comments)
                 && comments.top <= viewport.bottom - threshold);
@@ -994,19 +1013,17 @@ public class TopicDetailActivity extends AppCompatActivity {
                 ? commentComposerBar.getVisibility() == View.VISIBLE
                 : readingActionsBar.getVisibility() == View.VISIBLE)) return;
         commentMode = showComposer;
-        if (showComposer) {
-            readingActionsBar.animate().cancel();
-            readingActionsBar.setVisibility(View.GONE);
-            commentComposerBar.setVisibility(View.VISIBLE);
-            commentComposerBar.setAlpha(0f);
-            commentComposerBar.animate().alpha(1f).setDuration(160).start();
-        } else {
-            commentComposerBar.animate().cancel();
-            commentComposerBar.setVisibility(View.GONE);
-            readingActionsBar.setVisibility(View.VISIBLE);
-            readingActionsBar.setAlpha(0f);
-            readingActionsBar.animate().alpha(1f).setDuration(160).start();
+        if (bottomActions.isShown() && ViewCompat.isLaidOut(bottomActions)) {
+            MaterialFadeThrough transition = new MaterialFadeThrough();
+            transition.setDuration(220);
+            transition.addTarget(readingActionsBar); transition.addTarget(commentComposerBar);
+            TransitionManager.beginDelayedTransition(bottomActions, transition);
         }
+        // Both modes share the same measured slot, so switching cannot move the comment list.
+        readingActionsBar.setVisibility(showComposer ? View.INVISIBLE : View.VISIBLE);
+        commentComposerBar.setVisibility(showComposer ? View.VISIBLE : View.INVISIBLE);
+        readingActionsBar.setImportantForAccessibility(showComposer ? View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS : View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+        commentComposerBar.setImportantForAccessibility(showComposer ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
     }
 
     private void submitComment() {
@@ -1076,7 +1093,7 @@ public class TopicDetailActivity extends AppCompatActivity {
     private void replyToComment(com.fimtale.model.Comment comment) {
         if (commentSending) return;
         replyInput.reply(comment, currentTopicId);
-        setCommentMode(true); commentsSection.open(); replyInput.focus();
+        setCommentMode(true); replyInput.focus();
     }
 
 }

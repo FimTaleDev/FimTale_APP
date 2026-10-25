@@ -193,6 +193,26 @@ public class ReaderCommentsPanelTest {
         comments(102, 1, "asc").reply(data(102, 1));
     }
 
+    @Test public void rebindingTheSameChapterKeepsTheFocusedDraftAndCurrentCommentPage() {
+        panel.bind(101);
+        comments(101, 1, "asc").reply(data(101, 32));
+        root.findViewById(R.id.readerCommentsNext).performClick();
+        comments(101, 2, "asc").reply(data(101, 32));
+        TextView input = root.findViewById(R.id.readerCommentComposerInput);
+        input.setText("正在输入的评论"); input.requestFocus();
+        RecyclerView.Adapter<?> original = list.getAdapter();
+        int requests = pending.size();
+        String currentPage = text(R.id.readerCommentsPage);
+
+        panel.bind(101);
+
+        assertEquals("A layout rebind must not fetch comments again", requests, pending.size());
+        assertSame(original, list.getAdapter()); assertTrue(input.hasFocus());
+        assertEquals("正在输入的评论", input.getText().toString());
+        assertEquals(currentPage, text(R.id.readerCommentsPage));
+        assertEquals(View.GONE, root.findViewById(R.id.readerCommentsSkeleton).getVisibility());
+    }
+
     @Test public void postingACommentReloadsOnlyItsChapterAndCanceledPostsCannotReloadAnotherChapter() {
         panel.bind(101);
         comments(101, 1, "asc").reply(data(101, 0));

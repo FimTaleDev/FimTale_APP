@@ -41,6 +41,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.core.view.WindowInsetsAnimationCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.graphics.ColorUtils;
 import android.graphics.Color;
@@ -207,6 +208,7 @@ public class ReaderActivity extends AppCompatActivity {
     private int pagedViewportWidth;
     private int pagedViewportHeight;
     private boolean pageReflowPending;
+    private final Set<WindowInsetsAnimationCompat> imeAnimations = new HashSet<>();
     private boolean rebuildingReaderContent;
     private boolean adjacentChapterLoadPosted;
     private VerticalPosition pendingVerticalPosition;
@@ -372,6 +374,17 @@ public class ReaderActivity extends AppCompatActivity {
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
 
         installWindowInsets(findViewById(R.id.readerRoot));
+        ViewCompat.setWindowInsetsAnimationCallback(findViewById(R.id.readerRoot),
+                new WindowInsetsAnimationCompat.Callback(WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                    @Override public void onPrepare(@NonNull WindowInsetsAnimationCompat animation) {
+                        if ((animation.getTypeMask() & WindowInsetsCompat.Type.ime()) != 0) imeAnimations.add(animation);
+                    }
+                    @NonNull @Override public WindowInsetsCompat onProgress(@NonNull WindowInsetsCompat insets,
+                            @NonNull List<WindowInsetsAnimationCompat> running) { return insets; }
+                    @Override public void onEnd(@NonNull WindowInsetsAnimationCompat animation) {
+                        if (imeAnimations.remove(animation)) viewPager.post(() -> checkPageViewport());
+                    }
+                });
 
         topToolbar.setNavigationOnClickListener(v -> finish());
         topToolbar.inflateMenu(R.menu.menu_reader);
@@ -495,12 +508,7 @@ public class ReaderActivity extends AppCompatActivity {
                 loadWorkNavigation();
             }
         });
-        viewPager.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-            int width = viewPager.getWidth() - viewPager.getPaddingLeft() - viewPager.getPaddingRight();
-            int height = viewPager.getHeight() - viewPager.getPaddingTop() - viewPager.getPaddingBottom();
-            if (width > 0 && height > 0 && (width != pagedViewportWidth || height != pagedViewportHeight))
-                requestPageReflow();
-        });
+        viewPager.getViewTreeObserver().addOnGlobalLayoutListener(this::checkPageViewport);
 
         hideSystemUI();
         
@@ -1122,6 +1130,11 @@ public class ReaderActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        View root = findViewById(R.id.readerRoot);
+        if (root != null) ViewCompat.setWindowInsetsAnimationCallback(root, null);
+        imeAnimations.clear();
+        if (viewPager != null) viewPager.setAdapter(null);
+        if (recyclerView != null) recyclerView.setAdapter(null);
         if (menuOverlay != null) TransitionManager.endTransitions((ViewGroup) menuOverlay);
         if (moreMenu != null) moreMenu.dismiss();
         if (readerCommentsSheetPanel != null) readerCommentsSheetPanel.close();
@@ -1594,8 +1607,9 @@ public class ReaderActivity extends AppCompatActivity {
         TextView prototype = LayoutInflater.from(this).inflate(R.layout.item_reader_page, null, false)
                 .findViewById(R.id.pageContentTextView);
         setReaderTextPadding(prototype, false);
-        int viewportWidth = width - viewPager.getPaddingLeft() - viewPager.getPaddingRight();
-        int viewportHeight = height - viewPager.getPaddingTop() - viewPager.getPaddingBottom();
+        boolean keepPagination = imeChangesViewport() && pagedViewportWidth > 0 && pagedViewportHeight > 0;
+        int viewportWidth = keepPagination ? pagedViewportWidth : width - viewPager.getPaddingLeft() - viewPager.getPaddingRight();
+        int viewportHeight = keepPagination ? pagedViewportHeight : height - viewPager.getPaddingTop() - viewPager.getPaddingBottom();
         int contentWidth = viewportWidth - prototype.getCompoundPaddingLeft() - prototype.getCompoundPaddingRight();
         int contentHeight = viewportHeight - prototype.getCompoundPaddingTop() - prototype.getCompoundPaddingBottom();
 
@@ -1680,13 +1694,26 @@ public class ReaderActivity extends AppCompatActivity {
         }
     }
 
-    /** Reflow after insets/viewport changes or asynchronous image metrics, retaining the visible text. */
+    /** Keyboard geometry affects the comment composer without changing book pagination. */
+    private boolean imeChangesViewport() {
+        WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(viewPager);
+        return !imeAnimations.isEmpty() || (insets != null && insets.isVisible(WindowInsetsCompat.Type.ime()));
+    }
+
+    private void checkPageViewport() {
+        if (isFinishing() || isDestroyed() || imeChangesViewport()) return;
+        int width = viewPager.getWidth() - viewPager.getPaddingLeft() - viewPager.getPaddingRight();
+        int height = viewPager.getHeight() - viewPager.getPaddingTop() - viewPager.getPaddingBottom();
+        if (width > 0 && height > 0 && (width != pagedViewportWidth || height != pagedViewportHeight)) requestPageReflow();
+    }
+
+    /** Reflow for persistent viewport changes, retaining the current chapter and text offset. */
     private void requestPageReflow() {
-        if (pageReflowPending || viewPager == null || viewPager.getVisibility() != View.VISIBLE || loadedChapters.isEmpty()) return;
+        if (pageReflowPending || viewPager == null || viewPager.getVisibility() != View.VISIBLE || loadedChapters.isEmpty() || imeChangesViewport()) return;
         pageReflowPending = true;
         viewPager.post(() -> {
             pageReflowPending = false;
-            if (isFinishing() || isDestroyed() || pages.isEmpty() || viewPager.getVisibility() != View.VISIBLE) return;
+            if (isFinishing() || isDestroyed() || pages.isEmpty() || viewPager.getVisibility() != View.VISIBLE || imeChangesViewport()) return;
             int oldIndex = Math.min(viewPager.getCurrentItem(), pages.size() - 1);
             int chapterId = pages.get(oldIndex).chapterId;
             int chapterStart = chapterStartIndex(pages, chapterId);
@@ -1902,23 +1929,23 @@ public class ReaderActivity extends AppCompatActivity {
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             int side = Math.round(16 * density);
             ViewGroup.MarginLayoutParams topParams = (ViewGroup.MarginLayoutParams) toolbar.getLayoutParams();
-            topParams.topMargin = insets.top + Math.round(4 * density);
-            topParams.leftMargin = insets.left + side;
-            topParams.rightMargin = insets.right + side;
-            toolbar.setLayoutParams(topParams);
+            int top = insets.top + Math.round(4 * density);
+            if (topParams.topMargin != top || topParams.leftMargin != insets.left + side || topParams.rightMargin != insets.right + side) {
+                topParams.topMargin = top;
+                topParams.leftMargin = insets.left + side; topParams.rightMargin = insets.right + side;
+                toolbar.setLayoutParams(topParams);
+            }
             ViewGroup.MarginLayoutParams bottomParams = (ViewGroup.MarginLayoutParams) bottomSheet.getLayoutParams();
-            bottomParams.bottomMargin = insets.bottom + side;
-            bottomParams.leftMargin = insets.left + side;
-            bottomParams.rightMargin = insets.right + side;
-            bottomSheet.setLayoutParams(bottomParams);
+            if (bottomParams.bottomMargin != insets.bottom + side || bottomParams.leftMargin != insets.left + side || bottomParams.rightMargin != insets.right + side) {
+                bottomParams.bottomMargin = insets.bottom + side;
+                bottomParams.leftMargin = insets.left + side; bottomParams.rightMargin = insets.right + side;
+                bottomSheet.setLayoutParams(bottomParams);
+            }
             header.setPadding(insets.left, insets.top + Math.round(12 * density), insets.right, header.getPaddingBottom());
             footer.setPadding(insets.left + side, footer.getPaddingTop(), insets.right + side,
                     insets.bottom + Math.round(8 * density));
             int bodyTop = insets.top + Math.round(50 * density);
             int bodyBottom = insets.bottom + Math.round(30 * density);
-            View focus = root.findFocus();
-            if (focus != null && focus.getId() == R.id.readerCommentComposerInput)
-                bodyBottom = Math.max(bodyBottom, windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom);
             pager.setPadding(insets.left, bodyTop, insets.right, bodyBottom);
             scroller.setPadding(insets.left, bodyTop, insets.right, bodyBottom);
             return windowInsets;
@@ -1945,6 +1972,17 @@ public class ReaderActivity extends AppCompatActivity {
         ReaderAdapter(List<ReaderPage> data, boolean isVerticalMode) {
             this.data = data;
             this.isVerticalMode = isVerticalMode;
+            setHasStableIds(!isVerticalMode);
+        }
+
+        @Override public long getItemId(int position) {
+            if (isVerticalMode) return RecyclerView.NO_ID;
+            ReaderPage page = data.get(position);
+            int chapter = java.util.Collections.binarySearch(chapterStartPageIndices, position);
+            if (chapter < 0) chapter = -chapter - 2;
+            int relativePage = chapter >= 0 ? position - chapterStartPageIndices.get(chapter) : position;
+            // Comment identity survives changes to the chapter's page count and adjacent preloads.
+            return ((long) page.chapterId << 32) | (page.type == ReaderPage.TYPE_COMMENT ? 0xffffffffL : relativePage);
         }
         
         @Override
@@ -2169,7 +2207,7 @@ public class ReaderActivity extends AppCompatActivity {
                 textView = itemView.findViewById(R.id.pageContentTextView);
                 textView.getViewTreeObserver().addOnPreDrawListener(() -> {
                     int position = getBindingAdapterPosition();
-                    if (!isVerticalMode && position != RecyclerView.NO_POSITION && position < data.size()
+                    if (!isVerticalMode && !imeChangesViewport() && position != RecyclerView.NO_POSITION && position < data.size()
                             && data.get(position).type == ReaderPage.TYPE_TEXT && textView.getLayout() != null) {
                         int available = textView.getHeight() - textView.getCompoundPaddingTop() - textView.getCompoundPaddingBottom();
                         if (available > 0 && textView.getLayout().getHeight() > available) requestPageReflow();
@@ -2263,9 +2301,10 @@ public class ReaderActivity extends AppCompatActivity {
                     commentsComposer.setVisibility(View.VISIBLE);
                     tvChapterTitle.setText(getString(R.string.comments_title));
                     tvChapterTitle.setTextColor(textColor);
-                    if (commentsPanel != null) commentsPanel.close();
-                    commentsPanel = new ReaderCommentsPanel(ReaderActivity.this, itemView, rootTopicId);
-                    commentsPanel.setWorkAuthor(workData == null || workData.getAuthorInfo() == null ? 0 : workData.getAuthorInfo().getId());
+                    if (commentsPanel == null) {
+                        commentsPanel = new ReaderCommentsPanel(ReaderActivity.this, itemView, rootTopicId);
+                        commentsPanel.setWorkAuthor(workData == null || workData.getAuthorInfo() == null ? 0 : workData.getAuthorInfo().getId());
+                    }
                     commentsPanel.bind(chapterId);
                 }
 

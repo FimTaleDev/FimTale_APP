@@ -96,4 +96,28 @@ public class ReaderInsetsTest {
         assertFooterSafe(side);
         assertEquals(root.getHeight() - dp(8), bounds(R.id.batteryLayout).bottom);
     }
+
+    @Test public void focusingACommentAndOpeningTheKeyboardKeepsTheBookViewportUnchanged() {
+        Insets navigation = Insets.of(0, 0, 0, dp(24));
+        apply(navigation, true, false);
+        View pager = root.findViewById(R.id.viewPager);
+        int before = pager.getHeight() - pager.getPaddingTop() - pager.getPaddingBottom();
+        android.widget.EditText input = new android.widget.EditText(root.getContext());
+        input.setId(R.id.readerCommentComposerInput); root.addView(input); input.requestFocus();
+        assertTrue(input.hasFocus());
+
+        for (int keyboardHeight : new int[]{300, 340, 0}) {
+            Insets status = Insets.of(0, dp(24), 0, 0);
+            WindowInsetsCompat insets = new WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), status)
+                    .setInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars(), status)
+                    .setInsets(WindowInsetsCompat.Type.navigationBars(), navigation)
+                    .setInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars(), navigation)
+                    .setVisible(WindowInsetsCompat.Type.systemBars(), true)
+                    .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, dp(keyboardHeight)))
+                    .setVisible(WindowInsetsCompat.Type.ime(), keyboardHeight > 0).build();
+            ViewCompat.dispatchApplyWindowInsets(root, insets);
+            assertEquals(before, pager.getHeight() - pager.getPaddingTop() - pager.getPaddingBottom());
+        }
+    }
 }

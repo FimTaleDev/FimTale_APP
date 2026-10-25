@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/commentComposerBar"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_gravity="center_vertical"
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:visibility="invisible">
+    <com.fimtale.ui.icons.MdiTextInputLayout
+        android:id="@+id/commentComposerInputLayout"
+        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+        android:hint="@string/comments_post_hint" style="@style/Widget.Fimtale.TextInputLayout">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/commentComposerInput"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:maxLines="3" android:minLines="1" android:gravity="top|start"
+            android:inputType="textMultiLine|textCapSentences" android:imeOptions="actionSend" />
+    </com.fimtale.ui.icons.MdiTextInputLayout>
+    <com.fimtale.ui.icons.MdiButton
+        android:id="@+id/commentComposerEmoji" style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+        android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="6dp"
+        android:contentDescription="@string/editor_tool_emoji" app:iconSize="@dimen/mdi_icon_size" app:mdiIcon="emoticon-happy-outline" />
+    <com.fimtale.ui.icons.MdiButton
+        android:id="@+id/commentComposerSend" style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+        android:layout_width="52dp" android:layout_height="52dp" android:layout_marginStart="8dp"
+        android:contentDescription="@string/comments_send_description" app:iconSize="@dimen/mdi_icon_size" app:mdiIcon="send" />
+</LinearLayout>
