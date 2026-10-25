@@ -12,5 +12,7 @@
         <item name="iconSize">@dimen/mdi_icon_size</item>
         <item name="iconPadding">0dp</item>
         <item name="iconGravity">textStart</item>
+        <item name="backgroundTint">@color/editor_format_background</item>
+        <item name="iconTint">@color/editor_format_icon</item>
     </style>
 </resources>

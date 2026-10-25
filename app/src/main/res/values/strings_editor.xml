@@ -1,4 +1,10 @@
 <resources>
+    <string name="editor_undo">撤销</string>
+    <string name="editor_redo">重做</string>
+    <string name="editor_character_count">%1$d 字</string>
+    <string name="editor_selection_count">%1$d 字 · 选中 %2$d 字</string>
+    <string name="editor_source_mode_active">正在显示源码</string>
+    <string name="editor_visual_mode_active">正在显示正文格式</string>
     <string name="editor_preview">预览</string>
     <string name="editor_return_to_editing">返回编辑</string>
     <item name="editorPreviewContent" type="id" />

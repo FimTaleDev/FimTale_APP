@@ -24,6 +24,9 @@ import com.fimtale.editor.BbCodeInsertion;
 import com.fimtale.editor.EditorFormatDialog;
 import com.fimtale.editor.BbCodeEditText;
 import com.fimtale.editor.EditorViewModel;
+import com.fimtale.editor.EditorHistory;
+import com.fimtale.editor.EditorTextStats;
+import com.fimtale.editor.EditorPreviewDialog;
 import com.fimtale.ui.captcha.CaptchaDialogFragment;
 import com.fimtale.ui.captcha.CaptchaDialogHost;
 import com.fimtale.editor.TagPickerDialog;
@@ -57,6 +60,12 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
     private BottomSheetDialog metadataSheet;
     private com.fimtale.ui.BottomSheetMenu moreMenu;
     private View metadataSheetView;
+    private androidx.appcompat.app.AlertDialog previewDialog;
+    private String countedSource;
+    private int characterCount;
+    private final Runnable updateStatistics = this::updateEditorStatistics;
+    private int restoredSelectionStart, restoredSelectionEnd, restoredScrollY;
+    private boolean restorePositionPending;
     private CaptchaDialogHost captcha;
     private final ActivityResultLauncher<Intent> login = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -91,12 +100,19 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
         captcha = new CaptchaDialogHost(this, CaptchaDialogFragment.RESULT_KEY,
                 () -> model.captchaRequested, model::captchaResult);
         metadataVisible = state != null && state.getBoolean("metadata_visible");
+        restorePositionPending = state != null;
+        if (state != null) {
+            restoredSelectionStart = state.getInt("editor_selection_start");
+            restoredSelectionEnd = state.getInt("editor_selection_end");
+            restoredScrollY = state.getInt("editor_scroll_y");
+        }
         toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> leave());
         androidx.appcompat.widget.Toolbar.OnMenuItemClickListener menuActions = item -> {
             if (item.getItemId() == R.id.action_more) { moreMenu.show(); return true; }
             if (model.busy) { toast(getString(R.string.editor_wait_operation)); return true; }
             if (item.getItemId() == R.id.action_editor_metadata) { showMetadata(true); }
+            else if (item.getItemId() == R.id.action_editor_preview) showPreview();
             else if (item.getItemId() == R.id.action_editor_submit) submit();
             else if (item.getItemId() == R.id.action_save_draft) { collect(); model.saveDraft(() -> toast(model.message)); }
             else if (item.getItemId() == R.id.action_draft_conflict) {
@@ -129,6 +145,10 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
                 EditorFormatDialog.editMarkdown(this, markdown).showNow(getSupportFragmentManager(), EditorFormatDialog.TAG);
         });
         body.setSourceVisible(state != null && state.getBoolean("source_visible"));
+        body.setEditingListener(() -> {
+            updateEditingControls();
+            body.removeCallbacks(updateStatistics); body.postDelayed(updateStatistics, 150);
+        });
         updateSourceButton();
         intro = findViewById(R.id.editorIntro); cover = findViewById(R.id.editorCover);
         originLink = findViewById(R.id.editorOriginLink); prequel = findViewById(R.id.editorPrequel);
@@ -152,6 +172,8 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
         };
         for (Spinner spinner : new Spinner[]{type, length, rating, origin, publish}) spinner.setOnItemSelectedListener(selected);
         findViewById(R.id.editorBold).setOnClickListener(v -> wrap("b"));
+        findViewById(R.id.editorUndo).setOnClickListener(v -> restoreHistory(false));
+        findViewById(R.id.editorRedo).setOnClickListener(v -> restoreHistory(true));
         findViewById(R.id.editorItalic).setOnClickListener(v -> wrap("i"));
         findViewById(R.id.editorQuote).setOnClickListener(v -> wrap("quote"));
         findViewById(R.id.editorSpoiler).setOnClickListener(v -> wrap("spoiler"));
@@ -236,9 +258,38 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
                 type.setSelection(Math.max(0, model.document.work.type - 1));
             }
             if (boundVersion != model.documentVersion) {
+                boolean wasBound = boundVersion >= 0;
                 boundVersion = model.documentVersion;
                 EditorDocument d = model.document;
-                title.setText(chapter ? d.chapter.title : d.work.title); body.setText(chapter ? d.chapter.content : d.work.preface);
+                String source = chapter ? d.chapter.content : d.work.preface;
+                if (source == null) source = "";
+                int start = wasBound ? Math.max(0, body.getSelectionStart())
+                        : model.bodyHistory.current() == null ? 0 : model.bodyHistory.current().selectionStart;
+                int end = wasBound ? Math.max(start, body.getSelectionEnd())
+                        : model.bodyHistory.current() == null ? start : model.bodyHistory.current().selectionEnd;
+                int scrollY = wasBound ? findViewById(R.id.editorScroll).getScrollY() : 0;
+                body.setUndoHistory(null);
+                if (model.historyDocument != d) {
+                    model.bodyHistory.reset(source, 0, 0); model.historyDocument = d;
+                    start = end = 0;
+                } else if (model.bodyHistory.current() != null && !model.bodyHistory.current().text.equals(source)) {
+                    model.bodyHistory.breakGroup();
+                    model.bodyHistory.record(model.bodyHistory.current().text, source, start, end, start, end,
+                            android.os.SystemClock.uptimeMillis());
+                    model.bodyHistory.breakGroup();
+                }
+                title.setText(chapter ? d.chapter.title : d.work.title); body.setText(source);
+                body.setUndoHistory(model.bodyHistory);
+                if (restorePositionPending) {
+                    start = restoredSelectionStart; end = restoredSelectionEnd; scrollY = restoredScrollY;
+                    restorePositionPending = false;
+                }
+                int safeStart = Math.max(0, Math.min(body.length(), start));
+                body.setSelection(safeStart, Math.max(safeStart, Math.min(body.length(), end)));
+                final int savedScroll = scrollY, version = boundVersion;
+                body.post(() -> {
+                    if (boundVersion == version) findViewById(R.id.editorScroll).scrollTo(0, savedScroll);
+                });
                 intro.setText(d.work.intro); cover.setText(d.work.cover); originLink.setText(d.work.originLink); prequel.setText(d.prequelText);
                 ((MaterialCheckBox) findViewById(R.id.editorHandbook)).setChecked(d.handbookAccepted);
                 type.setSelection(Math.max(0, d.work.type - 1)); length.setSelection(d.work.length);
@@ -251,6 +302,8 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
         findViewById(R.id.editorWritingPanel).setVisibility(metadataVisible ? View.GONE : View.VISIBLE);
         findViewById(R.id.editorMetadataPanel).setVisibility(metadataVisible ? View.VISIBLE : View.GONE);
         renderMetadataSheetState();
+        updateEditingControls();
+        body.removeCallbacks(updateStatistics); body.postDelayed(updateStatistics, 150);
         captcha.sync();
     }
     @Override protected void onPostResume() {
@@ -288,6 +341,7 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
             d.syncTags(); enableClassification();
         }
         model.changed();
+        ((TextView) findViewById(R.id.editorStatus)).setText(model.message);
         updateToolbar();
     }
     private void updateToolbar() {
@@ -494,24 +548,93 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
     @Override public void applyFormat(BbCodeInsertion.Edit edit) {
         if (!canInsertFormat()) return;
         BbCodeEditText target = formatBody();
+        model.bodyHistory.breakGroup();
         target.beginBatchEdit();
         try {
             target.getText().replace(edit.start, edit.end, edit.replacement);
             target.requestFocus(); target.setSelection(edit.selectionStart, edit.selectionEnd);
-        } finally { target.endBatchEdit(); }
+        } finally { target.endBatchEdit(); model.bodyHistory.breakGroup(); }
     }
     private void insertAtCaret(EditText field, String value) {
         int start = Math.max(0, field.getSelectionStart());
         int end = Math.max(start, field.getSelectionEnd());
-        field.getText().replace(start, end, value);
-        field.requestFocus();
-        field.setSelection(Math.min(field.length(), start + value.length()));
+        model.bodyHistory.breakGroup();
+        field.beginBatchEdit();
+        try {
+            field.getText().replace(start, end, value);
+            field.requestFocus();
+            field.setSelection(Math.min(field.length(), start + value.length()));
+        } finally { field.endBatchEdit(); model.bodyHistory.breakGroup(); }
     }
     private void updateSourceButton() {
         com.google.android.material.button.MaterialButton button = findViewById(R.id.editorSource);
         button.setIcon(MdiIcons.drawable(this, body.isSourceVisible() ? "format-text" : "code-tags"));
         button.setContentDescription(getString(body.isSourceVisible() ? R.string.editor_hide_source_description : R.string.editor_show_source_description));
         button.setTooltipText(button.getContentDescription());
+        button.setSelected(body.isSourceVisible());
+        button.setStateDescription(getString(body.isSourceVisible() ? R.string.editor_source_mode_active : R.string.editor_visual_mode_active));
+    }
+
+    private void updateEditingControls() {
+        if (body == null || model == null) return;
+        boolean enabled = canInsertFormat();
+        findViewById(R.id.editorUndo).setEnabled(enabled && model.bodyHistory.canUndo());
+        findViewById(R.id.editorRedo).setEnabled(enabled && model.bodyHistory.canRedo());
+        findViewById(R.id.editorCharacterCount).setVisibility(model.ready && !metadataVisible ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateEditorStatistics() {
+        if (body == null || !model.ready) return;
+        String source = body.getText().toString();
+        if (!source.equals(countedSource)) {
+            countedSource = source; characterCount = EditorTextStats.count(source);
+        }
+        BbCodeEditText active = formatBody();
+        int start = Math.min(active.getSelectionStart(), active.getSelectionEnd());
+        int end = Math.max(active.getSelectionStart(), active.getSelectionEnd());
+        TextView count = findViewById(R.id.editorCharacterCount);
+        count.setText(start >= 0 && end > start
+                ? getString(R.string.editor_selection_count, characterCount, EditorTextStats.count(active.getText().toString(), start, end))
+                : getString(R.string.editor_character_count, characterCount));
+    }
+
+    private void restoreHistory(boolean redo) {
+        if (!canInsertFormat()) return;
+        ((com.fimtale.editor.BbCodeEditorLayout) findViewById(R.id.editorVisualLayout)).finishCellEditing();
+        body.restoreHistory(redo);
+        updateEditingControls();
+    }
+
+    private void showPreview() {
+        if (!canInsertFormat() || previewDialog != null) return;
+        model.bodyHistory.breakGroup();
+        BbCodeEditText active = formatBody();
+        android.view.inputmethod.InputMethodManager keyboard = getSystemService(android.view.inputmethod.InputMethodManager.class);
+        androidx.core.view.WindowInsetsCompat insets = androidx.core.view.ViewCompat.getRootWindowInsets(body);
+        boolean wasTyping = insets != null && insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime());
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(active.getWindowToken(), 0);
+        previewDialog = EditorPreviewDialog.show(this, body.getText().toString(),
+                body.getTextSize() / getResources().getDisplayMetrics().scaledDensity);
+        previewDialog.setOnDismissListener(dialog -> {
+            previewDialog = null;
+            if (!isFinishing() && !isDestroyed() && canInsertFormat()) {
+                BbCodeEditText target = formatBody();
+                target.requestFocus();
+                if (wasTyping && keyboard != null) target.post(() -> {
+                    if (!isFinishing() && target.isAttachedToWindow()) keyboard.showSoftInput(target, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                });
+            }
+        });
+    }
+
+    @Override public boolean onKeyShortcut(int keyCode, android.view.KeyEvent event) {
+        if (event.isCtrlPressed() && !event.isAltPressed() && canInsertFormat() && formatBody().hasFocus()) {
+            if (keyCode == android.view.KeyEvent.KEYCODE_B) { wrap("b"); return true; }
+            if (keyCode == android.view.KeyEvent.KEYCODE_I) { wrap("i"); return true; }
+            if (keyCode == android.view.KeyEvent.KEYCODE_P) { showPreview(); return true; }
+            if (keyCode == android.view.KeyEvent.KEYCODE_S) { collect(); model.saveDraft(null); return true; }
+        }
+        return super.onKeyShortcut(keyCode, event);
     }
     private void leave() {
         if (model.busy) { toast(getString(R.string.editor_wait_before_exit)); return; }
@@ -522,9 +645,15 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
     private void toast(String text) { Toast.makeText(this, text, Toast.LENGTH_SHORT).show(); }
     @Override protected void onStop() { super.onStop(); model.persistDraft(); }
     @Override protected void onSaveInstanceState(Bundle out) {
-        out.putBoolean("metadata_visible", metadataVisible); out.putBoolean("source_visible", body.isSourceVisible()); super.onSaveInstanceState(out);
+        out.putBoolean("metadata_visible", metadataVisible); out.putBoolean("source_visible", body.isSourceVisible());
+        int[] selection = ((com.fimtale.editor.BbCodeEditorLayout) findViewById(R.id.editorVisualLayout)).sourceSelection();
+        out.putInt("editor_selection_start", selection[0]); out.putInt("editor_selection_end", selection[1]);
+        out.putInt("editor_scroll_y", findViewById(R.id.editorScroll).getScrollY());
+        super.onSaveInstanceState(out);
     }
     @Override protected void onDestroy() {
+        if (body != null) { body.removeCallbacks(updateStatistics); body.setEditingListener(null); }
+        if (previewDialog != null) { previewDialog.setOnDismissListener(null); previewDialog.dismiss(); }
         if (moreMenu != null) moreMenu.dismiss();
         if (tagPicker != null) tagPicker.dismiss();
         if (metadataSheet != null) metadataSheet.dismiss();

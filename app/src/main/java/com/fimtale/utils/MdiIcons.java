@@ -79,6 +79,7 @@ public final class MdiIcons {
             else if (id == R.id.action_search) name = "magnify";
             else if (id == R.id.action_edit_work) name = "pencil";
             else if (id == R.id.action_editor_metadata || id == R.id.action_settings) name = "cog";
+            else if (id == R.id.action_editor_preview) name = "eye-outline";
             else if (id == R.id.action_toggle_theme) {
                 boolean isNight = (context.getResources().getConfiguration().uiMode
                         & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;

@@ -24,6 +24,7 @@ public final class BbCodeEditorLayout extends FrameLayout implements BbCodeEditT
     private boolean positioning;
     private boolean blockMode;
     private String expectedSource;
+    private int cellSelectionStart, cellSelectionEnd;
 
     public BbCodeEditorLayout(Context context, AttributeSet attrs) { super(context, attrs); }
     @Override public void onViewAdded(View child) {
@@ -42,6 +43,13 @@ public final class BbCodeEditorLayout extends FrameLayout implements BbCodeEditT
     }
     public BbCodeEditText activeEditor() { return cell == null ? body : cell; }
     public boolean isEditingCell() { return cell != null; }
+    public int[] sourceSelection() {
+        BbCodeEditText active = activeEditor();
+        int offset = cell == null ? 0 : Math.max(0, body.getText().getSpanStart(cellRange));
+        int start = Math.max(0, Math.min(active.getSelectionStart(), active.getSelectionEnd()));
+        int end = Math.max(start, Math.max(active.getSelectionStart(), active.getSelectionEnd()));
+        return new int[]{Math.min(body.length(), offset + start), Math.min(body.length(), offset + end)};
+    }
 
     @Override public void edit(BbCodeEditText.TableHit hit) {
         finishCellEditing();
@@ -61,6 +69,8 @@ public final class BbCodeEditorLayout extends FrameLayout implements BbCodeEditT
         expectedSource = source.subSequence(start, end).toString();
         source.setSpan(cellRange, start, end, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
         cell = new BbCodeEditText(getContext(), null);
+        cell.setEditingListener(body.getEditingListener());
+        cell.setHistoryOwner(body);
         cell.setLinkClickListener(body.getLinkClickListener());
         cell.setMarkdownClickListener(body.getMarkdownClickListener());
         cell.setParagraphIndentEnabled(blockMode && body.isParagraphIndentEnabled());
@@ -81,12 +91,17 @@ public final class BbCodeEditorLayout extends FrameLayout implements BbCodeEditT
         background.setStroke(Math.max(1, Math.round(getResources().getDisplayMetrics().density)),
                 MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary));
         cell.setBackground(background);
+        body.setSelection(end);
         cell.setText(content); cell.setSourceVisible(false);
         cell.setSelection(cell.length());
         addView(cell, new FrameLayout.LayoutParams(1, 1));
         position(bounds);
         cell.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                if (cell == null) return;
+                cellSelectionStart = Math.max(0, Math.min(cell.getSelectionStart(), cell.getSelectionEnd()));
+                cellSelectionEnd = Math.max(cellSelectionStart, Math.max(cell.getSelectionStart(), cell.getSelectionEnd()));
+            }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) { updateSource(s.toString()); }
         });
@@ -116,11 +131,17 @@ public final class BbCodeEditorLayout extends FrameLayout implements BbCodeEditT
             finishCellEditing(); return;
         }
         syncing = true;
+        body.beginBatchEdit();
         try {
+            body.setSelection(start + Math.min(expectedSource.length(), cellSelectionStart),
+                    start + Math.min(expectedSource.length(), cellSelectionEnd));
             source.replace(start, end, value);
             source.setSpan(cellRange, start, start + value.length(), Spanned.SPAN_INCLUSIVE_INCLUSIVE);
             expectedSource = value;
-        } finally { syncing = false; }
+            int selectionStart = Math.max(0, Math.min(value.length(), Math.min(cell.getSelectionStart(), cell.getSelectionEnd())));
+            int selectionEnd = Math.max(selectionStart, Math.min(value.length(), Math.max(cell.getSelectionStart(), cell.getSelectionEnd())));
+            body.setSelection(start + selectionStart, start + selectionEnd);
+        } finally { body.endBatchEdit(); syncing = false; }
     }
     @Override public void layoutChanged() {
         if (cell == null || positioning) return;

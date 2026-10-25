@@ -1,5 +1,6 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/action_editor_submit" android:title="@string/editor_submit_action" app:showAsAction="always"/>
+    <item android:id="@+id/action_editor_preview" android:title="@string/editor_preview" app:showAsAction="always" app:iconTint="?attr/colorOnSurface"/>
     <item android:id="@+id/action_editor_metadata" android:title="@string/editor_metadata" app:showAsAction="always" app:iconTint="?attr/colorOnSurface"/>
     <item android:id="@+id/action_more" android:title="@string/common_more" app:showAsAction="always" app:iconTint="?attr/colorOnSurface"/>
 </menu>

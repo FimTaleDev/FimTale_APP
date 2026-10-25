@@ -34,6 +34,8 @@ import retrofit2.Response;
 public class EditorViewModel extends AndroidViewModel {
     public final MutableLiveData<Integer> changes = new MutableLiveData<>(0);
     public EditorDocument document;
+    public final EditorHistory bodyHistory = new EditorHistory();
+    public EditorDocument historyDocument;
     public int workId, chapterId, documentVersion, savedId;
     public String userId, message = getApplication().getString(R.string.common_loading_active);
     public boolean initialized, ready, busy, error, needsLogin, captchaRequested;
@@ -162,6 +164,9 @@ public class EditorViewModel extends AndroidViewModel {
     public void changed() {
         if (!ready || busy || finished) return;
         dirty = true; changeVersion++; document.pendingSync = true;
+        if (!error && !syncConflict && !document.submissionUncertain
+                && getApplication().getString(R.string.editor_draft_synced).equals(message))
+            message = getApplication().getString(R.string.editor_draft_changes_pending);
         main.removeCallbacks(autoSave); main.postDelayed(autoSave, 500);
         main.removeCallbacks(autoSync);
         if (!syncConflict) main.postDelayed(autoSync, 10000);

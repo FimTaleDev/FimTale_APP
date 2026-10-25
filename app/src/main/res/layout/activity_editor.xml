@@ -2,7 +2,15 @@
     android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="?android:attr/colorBackground">
     <com.fimtale.ui.icons.MdiToolbar android:id="@+id/toolbar" android:layout_width="match_parent" android:layout_height="?attr/actionBarSize" app:mdiNavigationIcon="arrow-left" app:menu="@menu/editor_menu"/>
     <com.google.android.material.progressindicator.LinearProgressIndicator android:id="@+id/editorProgress" android:layout_width="match_parent" android:layout_height="wrap_content" android:indeterminate="true"/>
-    <TextView android:id="@+id/editorStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingHorizontal="20dp" android:paddingVertical="4dp" android:textSize="12sp" android:textColor="?attr/colorOnSurfaceVariant" android:accessibilityLiveRegion="polite"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="top" android:paddingHorizontal="20dp" android:paddingVertical="6dp">
+        <TextView android:id="@+id/editorStatus" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:textSize="12sp" android:textColor="?attr/colorOnSurfaceVariant"
+            android:accessibilityLiveRegion="polite"/>
+        <TextView android:id="@+id/editorCharacterCount" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="16dp" android:maxLines="1" android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant" android:visibility="gone"/>
+    </LinearLayout>
     <com.google.android.material.button.MaterialButton android:id="@+id/editorRetry" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:text="@string/editor_retry_load" android:visibility="gone"/>
     <FrameLayout android:id="@+id/editorForm" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone">
         <LinearLayout android:id="@+id/editorWritingPanel" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
@@ -17,7 +25,13 @@
                 android:scrollbars="none" android:overScrollMode="never" android:saveEnabled="false"/>
             </com.fimtale.editor.BbCodeEditorLayout>
             </ScrollView>
-            <LinearLayout android:id="@+id/editorFormatBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingHorizontal="8dp">
+            <LinearLayout android:id="@+id/editorFormatBar" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:paddingHorizontal="4dp" android:paddingVertical="4dp"
+                android:background="?android:attr/colorBackground">
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/editorUndo" style="@style/Widget.Fimtale.EditorFormatButton"
+                    app:mdiIcon="undo" android:contentDescription="@string/editor_undo" android:tooltipText="@string/editor_undo"/>
+                <com.fimtale.ui.icons.MdiButton android:id="@+id/editorRedo" style="@style/Widget.Fimtale.EditorFormatButton"
+                    app:mdiIcon="redo" android:contentDescription="@string/editor_redo" android:tooltipText="@string/editor_redo"/>
                 <HorizontalScrollView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:scrollbars="none" android:fillViewport="false">
                 <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">

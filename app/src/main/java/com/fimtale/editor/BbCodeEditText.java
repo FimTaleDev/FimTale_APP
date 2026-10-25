@@ -63,6 +63,14 @@ import java.util.regex.Pattern;
 
 /** Inline BBCode rendering over the original Editable, preserving selection, IME and undo. */
 public final class BbCodeEditText extends AppCompatEditText {
+    private EditorHistory undoHistory;
+    private BbCodeEditText historyOwner;
+    private boolean restoringHistory;
+    private int historyBatchDepth;
+    private String historyBefore;
+    private int historySelectionStart, historySelectionEnd;
+    private Runnable editingListener;
+    private final Runnable editingStateChanged = () -> { if (editingListener != null) editingListener.run(); };
     private final List<Object> decoration = new ArrayList<>();
     private final Map<String, InlineImage> images = new HashMap<>();
     private final Runnable render = this::renderNow;
@@ -123,13 +131,73 @@ public final class BbCodeEditText extends AppCompatEditText {
         Drawable cursor = getTextCursorDrawable();
         if (cursor != null) setTextCursorDrawable(new CollapseCursorDrawable(cursor));
         addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                if (undoHistory != null && !restoringHistory && historyBefore == null) {
+                    historyBefore = s.toString();
+                    historySelectionStart = getSelectionStart(); historySelectionEnd = getSelectionEnd();
+                }
+            }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { scheduleRender(); }
-            @Override public void afterTextChanged(Editable text) { scheduleRender(); }
+            @Override public void afterTextChanged(Editable text) {
+                scheduleRender();
+                if (historyBatchDepth == 0) recordHistory();
+                notifyEditingStateChanged();
+            }
         });
     }
 
+    public void setUndoHistory(EditorHistory history) {
+        undoHistory = history; historyBefore = null;
+        if (history != null && (history.current() == null || !history.current().text.contentEquals(getText())))
+            history.reset(getText().toString(), getSelectionStart(), getSelectionEnd());
+        notifyEditingStateChanged();
+    }
+
+    public void setEditingListener(Runnable listener) { editingListener = listener; }
+    Runnable getEditingListener() { return editingListener; }
+    void setHistoryOwner(BbCodeEditText owner) { historyOwner = owner; }
+
+    private void notifyEditingStateChanged() {
+        if (editingStateChanged == null) return;
+        removeCallbacks(editingStateChanged); post(editingStateChanged);
+    }
+
+    @Override public void beginBatchEdit() { historyBatchDepth++; super.beginBatchEdit(); }
+    @Override public void endBatchEdit() {
+        super.endBatchEdit();
+        historyBatchDepth = Math.max(0, historyBatchDepth - 1);
+        if (historyBatchDepth == 0) recordHistory();
+    }
+
+    private void recordHistory() {
+        if (historyBefore == null || undoHistory == null || restoringHistory) return;
+        String before = historyBefore; historyBefore = null;
+        undoHistory.record(before, getText().toString(), historySelectionStart, historySelectionEnd,
+                getSelectionStart(), getSelectionEnd(), android.os.SystemClock.uptimeMillis());
+        notifyEditingStateChanged();
+    }
+
+    public boolean restoreHistory(boolean redo) {
+        if (historyOwner != null) return historyOwner.restoreHistory(redo);
+        if (undoHistory == null || !isEnabled()) return false;
+        recordHistory();
+        EditorHistory.State state = redo ? undoHistory.redo() : undoHistory.undo();
+        if (state == null) return false;
+        restoringHistory = true;
+        beginBatchEdit();
+        try {
+            android.view.inputmethod.BaseInputConnection.removeComposingSpans(getText());
+            getText().replace(0, length(), state.text);
+            requestFocus(); setSelection(state.selectionStart, state.selectionEnd);
+        } finally { endBatchEdit(); restoringHistory = false; historyBefore = null; }
+        android.view.inputmethod.InputMethodManager input = getContext().getSystemService(android.view.inputmethod.InputMethodManager.class);
+        if (input != null) input.restartInput(this);
+        notifyEditingStateChanged();
+        return true;
+    }
+
     public void setSourceVisible(boolean visible) {
+        if (undoHistory != null) undoHistory.breakGroup();
         if (visible && tableCellListener != null) tableCellListener.sourceModeChanged();
         sourceVisible = visible; renderNow();
     }
@@ -271,7 +339,23 @@ public final class BbCodeEditText extends AppCompatEditText {
         }
         return super.onKeyDown(keyCode, event);
     }
+    @Override public boolean onKeyShortcut(int keyCode, KeyEvent event) {
+        if ((undoHistory != null || historyOwner != null) && event.isCtrlPressed() && !event.isAltPressed()) {
+            if (keyCode == KeyEvent.KEYCODE_Z) { restoreHistory(event.isShiftPressed()); return true; }
+            if (keyCode == KeyEvent.KEYCODE_Y) { restoreHistory(true); return true; }
+        }
+        return super.onKeyShortcut(keyCode, event);
+    }
     @Override public boolean onTextContextMenuItem(int id) {
+        if ((undoHistory != null || historyOwner != null) && (id == android.R.id.undo || id == android.R.id.redo))
+            return restoreHistory(id == android.R.id.redo);
+        EditorHistory history = historyOwner == null ? undoHistory : historyOwner.undoHistory;
+        if (sourceVisible && history != null && (id == android.R.id.paste || id == android.R.id.pasteAsPlainText)) {
+            history.breakGroup();
+            boolean pasted = super.onTextContextMenuItem(id);
+            history.breakGroup();
+            return pasted;
+        }
         if (sourceVisible || getText() == null || getSelectionStart() < 0) return super.onTextContextMenuItem(id);
         int start = Math.min(getSelectionStart(), getSelectionEnd()), end = Math.max(getSelectionStart(), getSelectionEnd());
         android.content.ClipboardManager clipboard = getContext().getSystemService(android.content.ClipboardManager.class);
@@ -288,7 +372,10 @@ public final class BbCodeEditText extends AppCompatEditText {
                 if (i > 0) incoming.append('\n');
                 incoming.append(clip.getItemAt(i).coerceToText(getContext()));
             }
-            insertVisualText(incoming); return true;
+            if (history != null) history.breakGroup();
+            insertVisualText(incoming);
+            if (history != null) history.breakGroup();
+            return true;
         }
         return super.onTextContextMenuItem(id);
     }
@@ -299,12 +386,15 @@ public final class BbCodeEditText extends AppCompatEditText {
         removeCallbacks(render); postDelayed(render, 80);
     }
     void refreshVisuals() { scheduleRender(); }
-    @Override protected void onSelectionChanged(int start, int end) { super.onSelectionChanged(start, end); scheduleRender(); }
+    @Override protected void onSelectionChanged(int start, int end) {
+        super.onSelectionChanged(start, end); scheduleRender(); notifyEditingStateChanged();
+    }
     @Override protected void onFocusChanged(boolean focused, int direction, Rect rect) { super.onFocusChanged(focused, direction, rect); scheduleRender(); }
     @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) { super.onSizeChanged(w, h, oldw, oldh); scheduleRender(); }
     @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); scheduleRender(); }
     @Override protected void onDetachedFromWindow() {
         removeCallbacks(render);
+        removeCallbacks(editingStateChanged);
         Editable text = getText();
         if (text != null) for (Object span : decoration) text.removeSpan(span);
         decoration.clear();
