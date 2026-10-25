@@ -29,10 +29,11 @@ public class ReportViewModel extends AndroidViewModel {
         needsLogin = session.isEmpty();
         complete = Boolean.TRUE.equals(saved.get("complete"));
         // Process recreation cannot determine whether the server accepted the previous POST.
-        if (Boolean.TRUE.equals(saved.get("pending"))) error = application.getString(R.string.report_uncertain);
+        if (Boolean.TRUE.equals(saved.get("pending"))) error = application.getString(isRecovery() ? R.string.recycle_request_uncertain : R.string.report_uncertain);
         saved.set("pending", false);
     }
     public String content() { String value = saved.get("content"); return value == null ? "" : value; }
+    private boolean isRecovery() { return Boolean.TRUE.equals(saved.get("recovery")); }
     public void setContent(String value) {
         saved.set("content", value);
         if (!contentError.isEmpty()) { contentError = ""; changed(); }
@@ -44,22 +45,26 @@ public class ReportViewModel extends AndroidViewModel {
         if (!next.equals(session)) {
             boolean wasSubmitting = submitting;
             cancel(); session = next;
-            error = wasSubmitting ? getApplication().getString(R.string.report_session_changed) : "";
+            error = wasSubmitting ? getApplication().getString(isRecovery() ? R.string.recycle_request_session_changed : R.string.report_session_changed) : "";
         }
         needsLogin = session.isEmpty(); changed();
     }
     public void submit(int targetType, long targetId) {
+        submit(targetType, targetId, false);
+    }
+    public void submit(int targetType, long targetId, boolean recovery) {
         if (submitting || complete) return;
         if (!current()) { connect(); return; }
         if (needsLogin) return;
+        saved.set("recovery", recovery);
         if (ReportRequest.trim(content()).isEmpty()) {
-            contentError = getApplication().getString(R.string.report_content_required); changed(); return;
+            contentError = getApplication().getString(recovery ? R.string.recycle_request_required : R.string.report_content_required); changed(); return;
         }
-        if ((targetType != ReportRequest.WORK && targetType != ReportRequest.COMMENT && targetType != ReportRequest.USER) || targetId <= 0) {
+        if (!ReportRequest.isTarget(targetType) || recovery && targetType == ReportRequest.USER || targetId <= 0) {
             error = getApplication().getString(R.string.report_invalid_target); changed(); return;
         }
         submitting = true; error = ""; contentError = ""; saved.set("pending", true); changed();
-        request = RetrofitClient.getInstance().createReport(session, new ReportRequest(targetType, targetId, content()));
+        request = RetrofitClient.getInstance().createReport(session, new ReportRequest(targetType, targetId, content(), recovery));
         request.enqueue(new Callback<ReportRequest.Result>() {
             @Override public void onResponse(Call<ReportRequest.Result> call, Response<ReportRequest.Result> response) {
                 if (request != call) return;
@@ -70,14 +75,14 @@ public class ReportViewModel extends AndroidViewModel {
                 }
                 if (response.isSuccessful() && response.body() != null && response.body().id > 0) {
                     complete = true; saved.set("complete", true);
-                } else error = response.isSuccessful() ? getApplication().getString(R.string.report_uncertain) : ApiErrors.message(response);
+                } else error = response.isSuccessful() ? getApplication().getString(recovery ? R.string.recycle_request_uncertain : R.string.report_uncertain) : ApiErrors.message(response);
                 changed();
             }
             @Override public void onFailure(Call<ReportRequest.Result> call, Throwable failure) {
                 if (request != call) return;
                 if (!current()) { connect(); return; }
                 request = null; submitting = false; saved.set("pending", false);
-                error = getApplication().getString(R.string.report_uncertain); changed();
+                error = getApplication().getString(recovery ? R.string.recycle_request_uncertain : R.string.report_uncertain); changed();
             }
         });
     }

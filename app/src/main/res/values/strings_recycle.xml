@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="recycle_title">回收站</string>
+    <string name="recycle_summary">查看已删除内容，恢复内容或申请恢复</string>
+    <string-array name="recycle_types"><item>作品</item><item>章节</item><item>评论</item><item>频道</item><item>频道评论</item></string-array>
+    <string-array name="recycle_statuses"><item>全部已删除</item><item>作者删除</item><item>站务删除</item></string-array>
+    <string-array name="recycle_scopes"><item>我的回收站</item><item>站务回收站</item></string-array>
+    <string name="recycle_empty">当前类型下没有已删除内容</string>
+    <string name="recycle_restore">恢复</string>
+    <string name="recycle_restore_confirm">确定恢复「%1$s」？</string>
+    <string name="recycle_delete">永久删除</string>
+    <string name="recycle_delete_confirm">永久删除「%1$s」？此操作无法撤销。</string>
+    <string name="recycle_request">申请恢复</string>
+    <string name="recycle_request_sent">恢复申请已提交，可在“我的报告”中查看处理结果与补充说明</string>
+    <string name="recycle_request_content">恢复申请说明</string>
+    <string name="recycle_request_hint">请说明申请恢复的原因，可附上相关链接，帮助站务核实。</string>
+    <string name="recycle_request_required">请填写恢复申请说明</string>
+    <string name="recycle_request_submit">提交恢复申请</string>
+    <string name="recycle_request_login">请先登录后提交恢复申请，已填写的说明会保留。</string>
+    <string name="recycle_request_uncertain">未能确认恢复申请是否提交成功，请先在“我的报告”中核对，避免重复提交。</string>
+    <string name="recycle_request_session_changed">登录状态已更改，未能确认刚才的恢复申请是否提交成功。</string>
+    <string name="recycle_meta">#%1$d · %2$s · %3$s\n%4$s</string>
+    <string name="recycle_parent">所属内容：%1$s</string>
+    <string name="recycle_view">查看内容</string>
+</resources>

@@ -32,6 +32,10 @@ public class LoginActivity extends AppCompatActivity {
     private TabLayout tabs;
     private EditText account, email, emailConfirmation, password, passwordConfirmation, code;
     private boolean binding;
+    private final androidx.activity.result.ActivityResultLauncher<android.content.Intent> resetPassword = registerForActivityResult(
+            new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(), result -> {
+                if (model != null && result.getResultCode() == RESULT_OK) model.chooseMode(Mode.PASSWORD);
+            });
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -76,6 +80,9 @@ public class LoginActivity extends AppCompatActivity {
         findViewById(R.id.loginSendEmail).setOnClickListener(v -> model.sendEmail());
         findViewById(R.id.loginForgot).setOnClickListener(v -> model.chooseMode(Mode.RESET));
         findViewById(R.id.loginReturn).setOnClickListener(v -> model.chooseMode(Mode.PASSWORD));
+        findViewById(R.id.loginCompleteReset).setOnClickListener(v ->
+                resetPassword.launch(new android.content.Intent(this, com.fimtale.account.PasswordResetActivity.class)
+                        .putExtra(com.fimtale.account.PasswordResetActivity.EXTRA_RETURN_TO_LOGIN, true)));
         model.changes.observe(this, ignored -> render());
     }
 
@@ -113,6 +120,7 @@ public class LoginActivity extends AppCompatActivity {
         visible(R.id.loginSendEmail, mail);
         visible(R.id.loginForgot, model.mode == Mode.PASSWORD);
         visible(R.id.loginReturn, reset);
+        visible(R.id.loginCompleteReset, reset);
         visible(R.id.loginExplanation, model.mode != Mode.PASSWORD);
         ((TextView) findViewById(R.id.loginExplanation)).setText(registration ? R.string.login_register_explanation
                 : reset ? R.string.login_reset_explanation : R.string.login_email_explanation);

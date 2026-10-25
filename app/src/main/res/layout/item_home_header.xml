@@ -23,7 +23,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:weightSum="3"
+                android:weightSum="4"
                 android:paddingTop="16dp"
                 android:paddingBottom="8dp"
                 android:visibility="visible">
@@ -97,6 +97,30 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="@string/tags_label"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnChannels"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <com.fimtale.ui.icons.MdiImageView
+                        android:layout_width="@dimen/mdi_icon_size"
+                        android:layout_height="@dimen/mdi_icon_size"
+                        app:mdiIcon="wifi"
+                        app:tint="?attr/colorPrimary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/channels_title"
                         android:textSize="12sp"/>
                 </LinearLayout>
             </LinearLayout>

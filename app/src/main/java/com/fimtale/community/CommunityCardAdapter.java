@@ -43,7 +43,7 @@ final class CommunityCardAdapter extends RecyclerView.Adapter<CommunityCardAdapt
         } else if (model.kind() == CommunityListModel.Kind.CHANNEL) {
             Community.Channel item = model.channels.get(position); image = item.cover(); title = item.name; body = item.description;
             subtitle = context.getString(R.string.community_channel_stats, item.count_works, item.count_user_fav);
-            intent = new Intent(context, SiteActivity.class).putExtra(SiteActivity.EXTRA_PATH, "/channel/" + item.id);
+            intent = com.fimtale.channels.ChannelActivity.intent(context, item.id);
         } else {
             Community.Tag item = model.tags.get(position); title = item.name;
             intent = new Intent(context, TagArticlesActivity.class).putExtra(TagArticlesActivity.EXTRA_TAG_NAME, item.name);

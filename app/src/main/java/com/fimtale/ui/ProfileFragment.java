@@ -82,6 +82,10 @@ public class ProfileFragment extends Fragment {
         btnReviewQueue.setOnClickListener(v -> startActivity(new Intent(requireContext(), com.fimtale.ReviewQueueActivity.class)));
         view.findViewById(R.id.btnPublish).setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), com.fimtale.DraftsActivity.class)));
+        view.findViewById(R.id.btnAccountProfile).setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), com.fimtale.account.AccountActivity.class)));
+        view.findViewById(R.id.btnRecycle).setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), com.fimtale.recycle.RecycleActivity.class)));
 
         setupButtons();
         setupEmptyState();

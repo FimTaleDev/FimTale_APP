@@ -67,6 +67,10 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
     private int restoredSelectionStart, restoredSelectionEnd, restoredScrollY;
     private boolean restorePositionPending;
     private CaptchaDialogHost captcha;
+    private final ActivityResultLauncher<Intent> qualification = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (model != null && result.getResultCode() == RESULT_OK) model.examReturned();
+            });
     private final ActivityResultLauncher<Intent> login = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (UserPreferences.isLoggedIn(this)) {
@@ -197,6 +201,9 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
         findViewById(R.id.editorRetry).setOnClickListener(v -> {
             if (model.needsLogin) login.launch(new Intent(this, LoginActivity.class)); else model.load();
         });
+        findViewById(R.id.editorExam).setOnClickListener(v -> {
+            if (!model.busy) { collect(); qualification.launch(new Intent(this, com.fimtale.account.ExamActivity.class)); }
+        });
         findViewById(R.id.editorSubmit).setOnClickListener(v -> submit());
         findViewById(R.id.editorMetadataDone).setOnClickListener(v -> showMetadata(false));
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -230,7 +237,8 @@ public class EditorActivity extends AppCompatActivity implements EditorFormatDia
         updateToolbar();
         ((TextView) findViewById(R.id.editorStatus)).setText(model.message);
         findViewById(R.id.editorProgress).setVisibility(model.busy ? View.VISIBLE : View.GONE);
-        findViewById(R.id.editorRetry).setVisibility(model.error && !model.loadError ? View.VISIBLE : View.GONE);
+        findViewById(R.id.editorRetry).setVisibility(model.error && !model.loadError && !model.needsExam ? View.VISIBLE : View.GONE);
+        findViewById(R.id.editorExam).setVisibility(model.needsExam && !model.busy ? View.VISIBLE : View.GONE);
         findViewById(R.id.editorForm).setVisibility(model.ready ? View.VISIBLE : View.GONE);
         findViewById(R.id.editorWorkFields).setVisibility(chapter ? View.GONE : View.VISIBLE);
         ((TextView) findViewById(R.id.editorHint)).setText(chapter ? getString(R.string.editor_chapter_hint)

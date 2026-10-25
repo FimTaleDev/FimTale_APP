@@ -58,6 +58,7 @@ public class SiteActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
         String path = getIntent().getStringExtra(EXTRA_PATH);
         if (path == null || !path.startsWith("/") || path.startsWith("//")) path = "/";
+        if (com.fimtale.modules.ModuleLinks.open(this, path)) { finish(); return; }
         startPath = path;
         toolbar.setTitle(R.string.app_name);
         webView = findViewById(R.id.site_webview);
@@ -74,6 +75,7 @@ public class SiteActivity extends AppCompatActivity {
                 String url = request.getUrl().toString();
                 if (SiteUrls.isSite(url)) {
                     if (request.isForMainFrame() && isLoginUrl(url)) { openNativeLogin(); return true; }
+                    if (request.isForMainFrame() && com.fimtale.modules.ModuleLinks.open(SiteActivity.this, url)) return true;
                     return false;
                 }
                 if (request.isForMainFrame() && ("https".equals(request.getUrl().getScheme()) || "http".equals(request.getUrl().getScheme()))) {
@@ -188,7 +190,7 @@ public class SiteActivity extends AppCompatActivity {
     @Override protected void onDestroy() {
         handler.removeCallbacks(checkSession);
         if (verification != null) verification.cancel();
-        webView.destroy();
+        if (webView != null) webView.destroy();
         super.onDestroy();
     }
 }

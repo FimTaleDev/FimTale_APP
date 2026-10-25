@@ -10,6 +10,11 @@ import retrofit2.http.*;
 
 /** Routes from ft-front/schema/openapi.json. No deprecated v1 endpoints. */
 public interface FimTaleApiService {
+    // ModuleApi owns the allowlisted routes and their request contracts.
+    @GET Call<com.google.gson.JsonElement> moduleGet(@Header("Token") String token, @Url String route,
+            @QueryMap java.util.Map<String, String> query, @Query("tags") java.util.List<String> tags);
+    @POST Call<com.google.gson.JsonElement> modulePost(@Header("Token") String token, @Url String route,
+            @QueryMap java.util.Map<String, String> query, @Body com.google.gson.JsonObject body);
     @POST("work/do_comment_vote") Call<Void> voteComment(@Header("Token") String token, @Body com.fimtale.community.Community.CommentVote request);
     @POST("work/do_comment_star_honor") Call<Void> starComment(@Header("Token") String token, @Body com.fimtale.community.Community.CommentId request);
     @POST("work/favorite_comment") Call<Void> favoriteComment(@Header("Token") String token, @Body com.fimtale.community.Community.CommentId request);

@@ -45,6 +45,7 @@ public class UserPreferences {
     }
     public static void clearSession(Context context) {
         session(context).edit().clear().apply();
+        context.getSharedPreferences("fimtale_exam", Context.MODE_PRIVATE).edit().clear().apply();
         android.webkit.CookieManager.getInstance().setCookie(
                 com.fimtale.network.SiteUrls.SITE, "ft_token=; Path=/; Max-Age=0; Secure");
         android.webkit.CookieManager.getInstance().flush();

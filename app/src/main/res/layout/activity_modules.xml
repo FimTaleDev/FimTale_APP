@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:orientation="vertical" android:background="?android:attr/colorBackground">
+    <com.google.android.material.card.MaterialCardView android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_margin="16dp" app:cardCornerRadius="16dp"
+        app:cardElevation="0dp" app:strokeWidth="0dp" app:cardBackgroundColor="?android:attr/colorBackground">
+        <com.fimtale.ui.icons.MdiToolbar android:id="@+id/modulesToolbar" android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize" app:mdiNavigationIcon="arrow-left" />
+    </com.google.android.material.card.MaterialCardView>
+    <com.google.android.material.tabs.TabLayout android:id="@+id/modulesTabs" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:background="?android:attr/colorBackground"
+        app:tabMode="scrollable" app:tabGravity="start" android:visibility="gone" />
+    <com.google.android.material.progressindicator.LinearProgressIndicator android:id="@+id/modulesProgress"
+        android:layout_width="match_parent" android:layout_height="4dp" android:indeterminate="true" android:visibility="gone" />
+    <com.fimtale.ui.PullRefreshLayout android:id="@+id/modulesSwipeRefresh" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1">
+        <androidx.core.widget.NestedScrollView android:id="@+id/modulesScroll" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:fillViewport="true" android:clipToPadding="false">
+            <LinearLayout android:id="@+id/modulesContent" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" />
+        </androidx.core.widget.NestedScrollView>
+    </com.fimtale.ui.PullRefreshLayout>
+    <LinearLayout android:id="@+id/modulesFooter" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="16dp" />
+</LinearLayout>

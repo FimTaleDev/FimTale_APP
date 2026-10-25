@@ -129,7 +129,7 @@ public final class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.
     }
     private static void openSite(Context context, String path) {
         if (com.fimtale.community.CommunityLinks.openComment(context, path)) return;
-        if (path != null) context.startActivity(new Intent(context, SiteActivity.class).putExtra(SiteActivity.EXTRA_PATH, path));
+        if (path != null) com.fimtale.utils.DialogHelper.openSite(context, path);
     }
     @Override public int getItemCount() { return items.size(); }
     @Override public void onViewAttachedToWindow(@NonNull Holder holder) {

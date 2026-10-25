@@ -46,6 +46,7 @@ public class HomeFragment extends Fragment {
     private LinearLayout btnGallery;
     private LinearLayout btnPosts;
     private LinearLayout btnTags;
+    private LinearLayout btnChannels;
     private Button btnLogin;
     private TabLayout tabLayout;
     private ViewPager2 bannerViewPager;
@@ -109,6 +110,7 @@ public class HomeFragment extends Fragment {
         btnGallery = header.findViewById(R.id.btnGallery);
         btnPosts = header.findViewById(R.id.btnPosts);
         btnTags = header.findViewById(R.id.btnTags);
+        btnChannels = header.findViewById(R.id.btnChannels);
         loadingSkeleton = view.findViewById(R.id.loadingSkeleton);
         loadingSkeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.HOME);
         errorTextView = view.findViewById(R.id.errorTextView);
@@ -144,6 +146,8 @@ public class HomeFragment extends Fragment {
             Intent intent = new Intent(getContext(), com.fimtale.TagListActivity.class);
             startActivity(intent);
         });
+
+        btnChannels.setOnClickListener(v -> startActivity(new Intent(requireContext(), com.fimtale.channels.ChannelDirectoryActivity.class)));
     }
 
     private void setupEmptyState() {

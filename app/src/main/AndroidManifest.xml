@@ -56,6 +56,19 @@
         <activity android:name=".ReviewQueueActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.Fimtale.FullTransparent" />
 
+        <activity android:name=".account.AccountActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.Fimtale.FullTransparent" />
+        <activity android:name=".account.ExamActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.Fimtale.FullTransparent" />
+        <activity android:name=".account.PasswordResetActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.Fimtale.FullTransparent" />
+        <activity android:name=".channels.ChannelDirectoryActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.Fimtale.FullTransparent" />
+        <activity android:name=".channels.ChannelActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.Fimtale.FullTransparent" />
+        <activity android:name=".recycle.RecycleActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.Fimtale.FullTransparent" />
+
         <!-- 收藏页 -->
         <activity android:name=".community.CommentDetailActivity" android:exported="false"
             android:theme="@style/Theme.Fimtale.FullTransparent" />

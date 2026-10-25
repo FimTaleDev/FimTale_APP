@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="modules_settings_category">账号与社区</string>
+    <string name="modules_uncertain">未能确认操作结果。请刷新核对后再决定是否重试。</string>
+    <string name="modules_retry">重新加载</string>
+    <string name="modules_required">请完整填写必填项</string>
+    <string name="modules_invalid_id">请输入有效的正整数 ID 或本站链接</string>
+    <string name="modules_saved">已保存</string>
+    <string name="modules_empty">暂无内容</string>
+    <string name="modules_login">登录后使用此功能</string>
+    <string name="modules_unsaved">放弃尚未保存的修改？</string>
+    <string name="modules_invalid_url">请填写有效的 HTTP 或 HTTPS 地址</string>
+</resources>

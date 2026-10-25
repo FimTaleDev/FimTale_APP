@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exam_title">资格考试</string>
+    <string name="exam_summary">完成 L2 考试，解锁作品发表资格</string>
+    <string name="exam_instructions">通过考试可解锁发表等功能。考试共 10 题，满分 100 分，60 分及格；满分可获得 120 比特奖励。每天仅一次机会，限时 15 分钟。请先阅读用户手册，勿泄露、交流或分享题目与答案。以服务端实际题目与截止时间为准。</string>
+    <string name="exam_handbook">阅读用户手册</string>
+    <string name="exam_start">开始考试</string>
+    <string name="exam_start_confirm">确定开始考试？每天只有一次机会，开始后会持续计时。</string>
+    <string name="exam_submit">提交试卷</string>
+    <string name="exam_retry_submit">重试交卷</string>
+    <string name="exam_again">参加新的考试</string>
+    <string name="exam_again_hint">每天仅一次机会。新的考试开始成功后会替换本机保存的上次试卷与结果。</string>
+    <string name="exam_again_confirm">确定参加新的考试？每天仅一次机会，开始成功后会替换上次试卷与结果。</string>
+    <string name="exam_return">返回上一页</string>
+    <string name="exam_unanswered">未作答</string>
+    <string name="exam_result_unavailable">资格状态已更新，但上次交卷的成绩响应未收到，无法显示具体分数。</string>
+    <string name="exam_submit_confirm">已完成 %1$d / %2$d 题，确定交卷？未作答的题目将按空白提交。</string>
+    <string name="exam_leave">离开后仍会计时。请在截止前返回此页面继续答题。</string>
+    <string name="exam_timer">剩余 %1$02d:%2$02d · 已答 %3$d / %4$d</string>
+    <string name="exam_question">第 %1$d / %2$d 题 · %3$s</string>
+    <string-array name="exam_types"><item>单选题</item><item>多选题</item><item>判断题</item><item>填空题</item></string-array>
+    <string name="exam_true">正确</string>
+    <string name="exam_false">错误</string>
+    <string name="exam_blank">第 %1$d 空</string>
+    <string name="exam_passed">考试通过 · %1$d 分</string>
+    <string name="exam_failed">本次考试未通过 · %1$d 分</string>
+    <string name="exam_result_question">%1$d. %2$s · %3$s</string>
+    <string name="exam_answers">你的答案：%1$s\n参考答案：%2$s</string>
+    <string name="exam_qualified">你已获得作品发表资格</string>
+    <string name="exam_unknown">未能确认交卷结果。答案已保留，请先刷新资格状态，再决定是否重试交卷。</string>
+    <string name="exam_retry_confirm">上次交卷可能已被受理，确定再次提交保存的答案？</string>
+    <string name="exam_invalid_response">考试数据不完整，请刷新资格状态后再尝试。</string>
+    <string name="exam_expired">考试时间已到</string>
+</resources>

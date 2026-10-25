@@ -136,7 +136,9 @@
     <string name="editor_original_account_required">登录已过期或账号已变更，请登录原账号后继续</string>
     <string name="editor_checking_permission">正在检查发表权限…</string>
     <string name="editor_permission_reload">您没有编辑此作品的权限，请重试加载</string>
-    <string name="editor_level_required">发表作品需要通过 L2 考试，请到网站完成资格认证</string>
+    <string name="editor_level_required">发表需要通过 L2 资格考试，可在 App 内完成后返回继续发表</string>
+    <string name="editor_open_exam">前往资格考试</string>
+    <string name="editor_exam_return">可继续编辑或再次点击发表。</string>
     <string name="editor_announcement_restricted">仅站务可以发表公告</string>
     <string name="editor_space_required">发表帖子需要先在网站开通个人空间</string>
     <string name="editor_captcha_cancelled">已取消验证，草稿已保留</string>

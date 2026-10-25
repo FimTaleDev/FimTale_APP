@@ -84,7 +84,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:constraint_referenced_ids="btnPublish,btnFavorites,btnHistory,btnMessages,btnReviewQueue,btnMyReports"
+                app:constraint_referenced_ids="btnPublish,btnFavorites,btnHistory,btnMessages,btnReviewQueue,btnMyReports,btnAccountProfile,btnRecycle"
                 app:flow_wrapMode="chain"
                 app:flow_maxElementsWrap="4"
                 app:flow_horizontalStyle="packed"
@@ -175,6 +175,22 @@
                 <com.fimtale.ui.icons.MdiImageView android:layout_width="@dimen/mdi_icon_size" android:layout_height="@dimen/mdi_icon_size"
                     app:mdiIcon="flag" app:tint="?attr/colorOnSurface"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/my_reports_title"
+                    android:textSize="12sp" android:layout_marginTop="4dp" android:textColor="?attr/colorOnSurface"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/btnAccountProfile" android:layout_width="0dp" android:layout_height="wrap_content"
+                app:layout_constraintWidth_percent="0.25" android:orientation="vertical" android:gravity="center" android:clickable="true"
+                android:focusable="true" android:background="?attr/selectableItemBackgroundBorderless" android:padding="8dp">
+                <com.fimtale.ui.icons.MdiImageView android:layout_width="@dimen/mdi_icon_size" android:layout_height="@dimen/mdi_icon_size"
+                    app:mdiIcon="account-cog" app:tint="?attr/colorOnSurface"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/account_short_title"
+                    android:textSize="12sp" android:layout_marginTop="4dp" android:textColor="?attr/colorOnSurface"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/btnRecycle" android:layout_width="0dp" android:layout_height="wrap_content"
+                app:layout_constraintWidth_percent="0.25" android:orientation="vertical" android:gravity="center" android:clickable="true"
+                android:focusable="true" android:background="?attr/selectableItemBackgroundBorderless" android:padding="8dp">
+                <com.fimtale.ui.icons.MdiImageView android:layout_width="@dimen/mdi_icon_size" android:layout_height="@dimen/mdi_icon_size"
+                    app:mdiIcon="delete-restore" app:tint="?attr/colorOnSurface"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/recycle_title"
                     android:textSize="12sp" android:layout_marginTop="4dp" android:textColor="?attr/colorOnSurface"/>
             </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>

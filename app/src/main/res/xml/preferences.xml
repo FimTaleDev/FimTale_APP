@@ -70,14 +70,23 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        app:title="@string/settings_advanced"
+        app:title="@string/modules_settings_category"
         app:iconSpaceReserved="false">
 
         <Preference
             app:key="account"
+            app:title="@string/account_title"
+            app:summary="@string/account_summary"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            app:key="sessions"
             app:title="@string/sessions_title"
             app:summary="@string/settings_sessions_summary"
             app:iconSpaceReserved="false" />
+
+        <Preference app:key="recycle" app:title="@string/recycle_title"
+            app:summary="@string/recycle_summary" app:iconSpaceReserved="false" />
 
     </PreferenceCategory>
 

@@ -40,7 +40,7 @@ public class EditorViewModel extends AndroidViewModel {
     public String userId, message = getApplication().getString(R.string.common_loading_active);
     public boolean initialized, ready, busy, error, needsLogin, captchaRequested;
     public boolean dirty, finished, allowAnnouncement;
-    public boolean loadError;
+    public boolean loadError, needsExam;
     private boolean cleared, loading;
     private int ownerId;
     private int initialWorkType = 1;
@@ -86,7 +86,7 @@ public class EditorViewModel extends AndroidViewModel {
     }
     public void load() {
         if (busy || loading || finished) return;
-        loadError = false;
+        loadError = false; needsExam = false;
         if (ready) persistDraft();
         busy = true; loading = true; error = false; message = getApplication().getString(R.string.editor_loading_online_draft); notifyUi();
         io.execute(() -> {
@@ -246,6 +246,7 @@ public class EditorViewModel extends AndroidViewModel {
     }
     public void prepareSubmit() {
         if (busy || !ready || finished) return;
+        needsExam = false;
         if (syncConflict) { fail(getApplication().getString(R.string.editor_conflict_before_publish)); return; }
         String validation = isChapter() ? document.chapter.validate() : document.work.validate();
         if (validation != null) { fail(validation); return; }
@@ -255,7 +256,7 @@ public class EditorViewModel extends AndroidViewModel {
         request(api.getUserAuth(token), auth -> {
             if (!String.valueOf(auth.userId).equals(userId) || !sameAccount()) { fail(getApplication().getString(R.string.error_account_changed)); return; }
             if (workId > 0 && !auth.canEdit(ownerId)) { fail(getApplication().getString(R.string.editor_permission_reload)); return; }
-            if (!isChapter() && !auth.canPublish()) { fail(getApplication().getString(R.string.editor_level_required)); return; }
+            if (!isChapter() && !auth.canPublish()) { needsExam = true; fail(getApplication().getString(R.string.editor_level_required)); return; }
             if (!isChapter() && document.work.type == 4 && auth.roleId < 4) { fail(getApplication().getString(R.string.editor_announcement_restricted)); return; }
             if (!isChapter() && document.work.type == 3 && auth.spaceStatus != 1) { fail(getApplication().getString(R.string.editor_space_required)); return; }
             if (isChapter()) submit(null, null);
@@ -263,6 +264,10 @@ public class EditorViewModel extends AndroidViewModel {
                 captchaRequested = true; message = getApplication().getString(R.string.captcha_title); notifyUi();
             }
         });
+    }
+    public void examReturned() {
+        if (busy || !needsExam || !sameAccount()) return;
+        needsExam = false; error = false; message = getApplication().getString(R.string.editor_exam_return); notifyUi();
     }
     public void captchaResult(String token, String provider) {
         // A token returned after process recreation cannot resume an unretained submission.

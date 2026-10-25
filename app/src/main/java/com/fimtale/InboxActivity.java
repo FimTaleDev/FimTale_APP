@@ -154,7 +154,7 @@ public abstract class InboxActivity extends AppCompatActivity {
         else if (n.type == 22 && path.startsWith("/user/reports")) startActivity(new Intent(this, ReportDetailActivity.class)
                 .putExtra(ReportDetailActivity.EXTRA_REPORT_ID, Inbox.number(n.object(), "id")));
         else if (path.matches("/work/[0-9]+")) startActivity(new Intent(this, TopicDetailActivity.class).putExtra(TopicDetailActivity.EXTRA_TOPIC_ID, Integer.parseInt(path.substring(6))));
-        else if (!com.fimtale.community.CommunityLinks.openComment(this, path)) startActivity(new Intent(this, SiteActivity.class).putExtra(SiteActivity.EXTRA_PATH, path));
+        else if (!com.fimtale.modules.ModuleLinks.open(this, path) && !com.fimtale.community.CommunityLinks.openComment(this, path)) startActivity(new Intent(this, SiteActivity.class).putExtra(SiteActivity.EXTRA_PATH, path));
     }
     private TextView text(LinearLayout row, String value, int size, boolean bold) {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(size);

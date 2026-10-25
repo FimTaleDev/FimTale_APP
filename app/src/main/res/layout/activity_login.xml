@@ -101,6 +101,10 @@
                 style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:layout_gravity="center_horizontal"
                 android:text="@string/login_return" android:visibility="gone" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/loginCompleteReset"
+                style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:layout_gravity="center_horizontal"
+                android:text="@string/account_reset_password" android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>

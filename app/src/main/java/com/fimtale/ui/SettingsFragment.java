@@ -56,10 +56,12 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
 
         Preference account = findPreference("account");
         if (account != null) account.setOnPreferenceClickListener(preference -> {
-            if (UserPreferences.isLoggedIn(requireContext())) startActivity(new Intent(requireContext(), AccountSessionsActivity.class));
+            if (UserPreferences.isLoggedIn(requireContext())) startActivity(new Intent(requireContext(), com.fimtale.account.AccountActivity.class));
             else DialogHelper.openLogin(requireContext());
             return true;
         });
+        modulePreference("sessions", AccountSessionsActivity.class);
+        modulePreference("recycle", com.fimtale.recycle.RecycleActivity.class);
         Preference filters = findPreference("content_filters");
         if (filters != null) filters.setOnPreferenceClickListener(preference -> {
             if (UserPreferences.isLoggedIn(requireContext())) startActivity(new Intent(requireContext(), ContentFiltersActivity.class));
@@ -145,6 +147,13 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         }
     }
     
+    private void modulePreference(String key, Class<?> activity) {
+        Preference preference = findPreference(key);
+        if (preference != null) preference.setOnPreferenceClickListener(item -> {
+            startActivity(new Intent(requireContext(), activity)); return true;
+        });
+    }
+
     private String formatBytes(long bytes) {
         if (bytes < 1024) return getString(R.string.settings_size_bytes, bytes);
         if (bytes < 1024 * 1024) return getString(R.string.settings_size_kilobytes, bytes / 1024.0);

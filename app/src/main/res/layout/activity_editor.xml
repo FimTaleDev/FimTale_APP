@@ -12,6 +12,7 @@
             android:textColor="?attr/colorOnSurfaceVariant" android:visibility="gone"/>
     </LinearLayout>
     <com.google.android.material.button.MaterialButton android:id="@+id/editorRetry" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:text="@string/editor_retry_load" android:visibility="gone"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/editorExam" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:text="@string/editor_open_exam" android:visibility="gone"/>
     <FrameLayout android:id="@+id/editorForm" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone">
         <LinearLayout android:id="@+id/editorWritingPanel" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
             <ScrollView android:id="@+id/editorScroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"

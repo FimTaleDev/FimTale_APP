@@ -195,7 +195,7 @@ public abstract class ReportsActivity extends AppCompatActivity {
         String path = report.targetPath(); if (path == null) return;
         if (report.target_type == 1 && report.target_id <= Integer.MAX_VALUE)
             startActivity(new Intent(this, TopicDetailActivity.class).putExtra(TopicDetailActivity.EXTRA_TOPIC_ID,(int)report.target_id));
-        else startActivity(new Intent(this, SiteActivity.class).putExtra(SiteActivity.EXTRA_PATH,path));
+        else com.fimtale.utils.DialogHelper.openSite(this, path);
     }
     private TextView text(LinearLayout row, String value, int size, boolean bold) {
         TextView text = new TextView(this); text.setText(value == null ? "" : value); text.setTextSize(size);
