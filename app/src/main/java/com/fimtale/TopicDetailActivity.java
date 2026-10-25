@@ -415,7 +415,7 @@ public class TopicDetailActivity extends AppCompatActivity {
         ImageView logoImage = shareView.findViewById(R.id.shareLogoImage);
 
         try {
-            java.io.InputStream is = getAssets().open("img/icon-full.png");
+            java.io.InputStream is = getAssets().open("img/logo-full.png");
             android.graphics.drawable.Drawable d = android.graphics.drawable.Drawable.createFromStream(is, null);
             logoImage.setImageDrawable(d);
         } catch (java.io.IOException e) {
