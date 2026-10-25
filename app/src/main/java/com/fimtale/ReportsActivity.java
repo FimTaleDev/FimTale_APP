@@ -141,8 +141,7 @@ public abstract class ReportsActivity extends AppCompatActivity {
         // In details the list occupies the full viewport and scrolls behind the floating card.
         findViewById(R.id.myReportsContent).setPadding(0, detail ? 0 : inset, 0, 0);
         list.setPadding(list.getPaddingLeft(), detail ? inset : 0, list.getPaddingRight(), list.getPaddingBottom());
-        header.setCardBackgroundColor(MaterialColors.getColor(header, detail
-                ? android.R.attr.colorBackground : com.google.android.material.R.attr.colorSurface));
+        header.setCardBackgroundColor(MaterialColors.getColor(header, android.R.attr.colorBackground));
         updateHeaderElevation();
     }
     private void updateHeaderElevation() {
