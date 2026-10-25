@@ -3,6 +3,7 @@ package com.fimtale.channels;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.MenuItem;
 import android.widget.*;
 import androidx.lifecycle.ViewModelProvider;
 import com.bumptech.glide.Glide;
@@ -28,6 +29,20 @@ public class ChannelDirectoryActivity extends ModuleActivity {
         state = new ViewModelProvider(this).get(ChannelDirectoryModel.class);
         wantCreate = saved == null ? getIntent().getBooleanExtra(EXTRA_CREATE, false) : saved.getBoolean("want_create");
         bind(state, R.string.channels_title);
+        MenuItem actionsMenu = toolbar.getMenu().add(R.string.common_more);
+        actionsMenu.setIcon(MdiIcons.drawable(this, "dots-vertical"));
+        actionsMenu.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        actionsMenu.setOnMenuItemClickListener(item -> {
+            boolean signedIn = state.signedIn();
+            String[] actions = signedIn
+                    ? new String[]{getString(R.string.channel_create), getString(R.string.channel_my_channels)}
+                    : new String[]{getString(R.string.channel_create)};
+            menu(actions, selected -> {
+                if (selected == 0) create();
+                else startActivity(UserContentActivity.intent(this, UserPreferences.getUserName(this), "channel"));
+            });
+            return true;
+        });
         tabLabels(R.array.channel_directory_tabs, state.tab, state::select);
         centerTabs(); centerPagers();
         startPage();
@@ -43,10 +58,7 @@ public class ChannelDirectoryActivity extends ModuleActivity {
             int id = state.createdId; state.createdId = 0; wantCreate = false;
             startActivity(ChannelActivity.intent(this, id)); return;
         }
-        button(content, R.string.channel_create, "create", false, false, this::create);
         if (state.signedIn()) {
-            button(content, R.string.channel_my_channels, "my_channels", false, false,
-                    () -> startActivity(UserContentActivity.intent(this, UserPreferences.getUserName(this), "channel")));
             if (state.auth.size() > 0 && !state.canCreate()) {
                 text(content, R.string.channel_create_exam);
                 button(content, R.string.exam_title, "exam", false, false, () -> startActivity(new Intent(this, ExamActivity.class)));
