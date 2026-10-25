@@ -2,6 +2,7 @@ package com.fimtale.ui;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
@@ -38,7 +39,10 @@ public final class ShimmerSkeletonView extends View {
         int foreground = themeColor(com.google.android.material.R.attr.colorOnSurface);
         baseColor = ColorUtils.blendARGB(background, foreground, .09f);
         highlightColor = ColorUtils.blendARGB(baseColor, foreground, .12f);
-        cardColor = context.getColor(R.color.card_background);
+        boolean nightMode = (getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        cardColor = nightMode ? background : context.getColor(R.color.card_background);
+        if (nightMode) setBackgroundColor(background);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
     }
 

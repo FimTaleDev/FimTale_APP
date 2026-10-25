@@ -1,6 +1,7 @@
 package com.fimtale;
 
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -297,6 +298,10 @@ public abstract class InboxActivity extends AppCompatActivity {
             LinearLayout row = holder.body; row.setGravity(Gravity.START); row.removeAllViews(); Object item = rows.get(position);
             holder.card.setCardBackgroundColor(item instanceof Inbox.Message || "loading".equals(item) && model.conversation != null ? getColor(R.color.message_chat_background)
                     : MaterialColors.getColor(row, com.google.android.material.R.attr.colorSurface));
+            if ("loading".equals(item) && (getResources().getConfiguration().uiMode
+                    & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES) {
+                holder.card.setCardBackgroundColor(MaterialColors.getColor(row, android.R.attr.colorBackground));
+            }
             if (item instanceof String) {
                 switch ((String)item) {
                     case "login": text(row, getString(R.string.inbox_login_message), 18, true); button(row, getString(R.string.login_title), () -> DialogHelper.openLogin(InboxActivity.this)); break;

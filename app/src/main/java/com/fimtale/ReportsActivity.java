@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -241,6 +242,11 @@ public abstract class ReportsActivity extends AppCompatActivity {
         }
         @Override public void onBindViewHolder(@NonNull Holder holder, int position) {
             LinearLayout row = holder.body; row.removeAllViews(); Object item = rows.get(position);
+            if ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                    == Configuration.UI_MODE_NIGHT_YES) {
+                ((MaterialCardView) holder.itemView).setCardBackgroundColor(MaterialColors.getColor(row,
+                        "loading".equals(item) ? android.R.attr.colorBackground : com.google.android.material.R.attr.colorSurface));
+            }
             holder.itemView.setOnClickListener(null); holder.itemView.setClickable(false); holder.itemView.setFocusable(false);
             if (item instanceof MyReport) {
                 MyReport report = (MyReport)item;
