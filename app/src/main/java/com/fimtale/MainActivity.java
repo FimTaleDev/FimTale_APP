@@ -4,6 +4,7 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 import androidx.lifecycle.Lifecycle;
 import com.fimtale.ui.ArticleFragment;
 import com.fimtale.ui.HomeFragment;
@@ -20,6 +21,7 @@ import android.view.Gravity;
 import android.view.View;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.transition.MaterialSharedAxis;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -123,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (targetFragment != null) {
                 androidx.fragment.app.FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+                transaction.setReorderingAllowed(true);
 
                 Map<Integer, Integer> menuOrder = new HashMap<>();
                 menuOrder.put(R.id.nav_home, 0);
@@ -133,12 +136,10 @@ public class MainActivity extends AppCompatActivity {
                 Integer currentOrder = menuOrder.get(currentItemId);
                 Integer newOrder = menuOrder.get(newItemId);
 
-                if (currentOrder != null && newOrder != null) {
-                    if (newOrder > currentOrder) {
-                        transaction.setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left);
-                    } else {
-                        transaction.setCustomAnimations(R.anim.slide_in_left, R.anim.slide_out_right);
-                    }
+                if (currentFragment != null && currentOrder != null && newOrder != null) {
+                    boolean forward = newOrder > currentOrder;
+                    currentFragment.setExitTransition(createPageTransition(forward));
+                    targetFragment.setEnterTransition(createPageTransition(forward));
                 }
 
                 if (!targetFragment.isAdded()) {
@@ -172,6 +173,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         com.fimtale.crash.CrashFeedback.whenNoPendingReport(this, () -> UpdateChecker.checkUpdate(this, false));
+    }
+
+    private MaterialSharedAxis createPageTransition(boolean forward) {
+        // Match the reader menu's catalog/typography transition.
+        MaterialSharedAxis transition = new MaterialSharedAxis(MaterialSharedAxis.X, forward);
+        transition.setDuration(240);
+        transition.setInterpolator(new FastOutSlowInInterpolator());
+        return transition;
     }
 
     private void updateToolbar(int itemId) {
