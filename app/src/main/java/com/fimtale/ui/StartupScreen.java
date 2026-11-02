@@ -21,7 +21,7 @@ import com.google.android.material.color.MaterialColors;
 
 /** A local, bounded launch animation while the first home request runs underneath. */
 public final class StartupScreen implements DefaultLifecycleObserver {
-    private static final long MAX_WAIT_MS = 6000;
+    private static final long MAX_WAIT_MS = 5500;
     private static final long TRANSITION_DURATION_MS = 320;
     private final AppCompatActivity activity;
     private final ViewGroup host;
