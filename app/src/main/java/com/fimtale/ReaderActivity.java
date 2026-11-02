@@ -417,7 +417,6 @@ public class ReaderActivity extends AppCompatActivity {
         btnChapterList.setOnClickListener(v -> toggleChapterList());
 
         btnSettings.setOnClickListener(v -> toggleSettingsPanel());
-        findViewById(R.id.btnCloseReaderMenu).setOnClickListener(v -> hideMenu());
         findViewById(R.id.btnLocateChapter).setOnClickListener(v -> locateCurrentChapter());
         findViewById(R.id.btnPreviousChapter).setOnClickListener(v -> {
             int previous = getPrevChapterId();

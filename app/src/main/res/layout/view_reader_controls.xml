@@ -47,7 +47,7 @@
             android:layout_height="wrap_content"
             android:minHeight="48dp"
             android:paddingStart="20dp"
-            android:paddingEnd="8dp"
+            android:paddingEnd="20dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -78,11 +78,6 @@
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
 
-            <com.fimtale.ui.icons.MdiImageView
-                android:id="@+id/btnCloseReaderMenu"
-                style="@style/Widget.Fimtale.Reader.IconButton"
-                android:contentDescription="@string/reader_close_menu"
-                app:mdiIcon="chevron-down" />
         </LinearLayout>
 
         <LinearLayout

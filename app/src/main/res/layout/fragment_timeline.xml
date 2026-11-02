@@ -6,11 +6,13 @@
         android:layout_width="match_parent" android:layout_height="match_parent">
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/timelineList"
             android:layout_width="match_parent" android:layout_height="match_parent"
+            android:paddingTop="@dimen/page_margin"
             android:paddingHorizontal="16dp" android:paddingBottom="16dp" android:clipToPadding="false"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
     </com.fimtale.ui.PullRefreshLayout>
     <com.fimtale.ui.ShimmerSkeletonView android:id="@+id/timelineSkeleton"
-        android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone" />
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginTop="@dimen/page_margin" android:visibility="gone" />
     <LinearLayout android:id="@+id/timelineState" android:orientation="vertical"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_gravity="center" android:gravity="center" android:padding="32dp" android:visibility="gone">

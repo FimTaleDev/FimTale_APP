@@ -37,6 +37,7 @@
                 android:id="@+id/loadingSkeleton"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:layout_marginTop="@dimen/page_margin"
                 android:visibility="gone"/>
 
             <LinearLayout

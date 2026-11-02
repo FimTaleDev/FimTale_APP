@@ -41,7 +41,6 @@
     <string name="reader_typography">排版</string>
     <string name="reader_theme_night">夜间</string>
     <string name="reader_theme_day">日间</string>
-    <string name="reader_close_menu">收起阅读菜单</string>
     <string name="reader_previous_chapter">上一章</string>
     <string name="reader_chapter_progress">本章阅读进度</string>
     <string name="reader_chapter_progress_value">本章已读 %1$.0f%%</string>
