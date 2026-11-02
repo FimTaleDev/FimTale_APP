@@ -331,6 +331,7 @@ public class HomeFragment extends Fragment {
             pageError.show(homeError.replace(getString(R.string.common_retry_suffix), ""), this::fetchHomePageData,
                     !bannerList.isEmpty() || !visibleTopics.isEmpty());
         }
+        if (getActivity() instanceof MainActivity) ((MainActivity) getActivity()).onHomeContentReady();
     }
 
     private void startBannerAutoScroll() {

@@ -10,6 +10,7 @@ import com.fimtale.ui.ArticleFragment;
 import com.fimtale.ui.HomeFragment;
 import com.fimtale.ui.TimelineFragment;
 import com.fimtale.ui.ProfileFragment;
+import com.fimtale.ui.StartupScreen;
 import com.fimtale.utils.MdiIcons;
 import com.fimtale.utils.UpdateChecker;
 import com.fimtale.utils.UserPreferences;
@@ -36,11 +37,20 @@ public class MainActivity extends AppCompatActivity {
     private Fragment currentFragment;
     private retrofit2.Call<Integer> unreadCall;
     private int unreadRequest;
+    private StartupScreen startupScreen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.Theme_Fimtale_MainActivity);
         super.onCreate(savedInstanceState);
+        getSplashScreen().setOnExitAnimationListener(splash -> splash.remove());
         setContentView(R.layout.activity_main);
+        if (savedInstanceState == null) {
+            startupScreen = new StartupScreen(this, () -> {
+                startupScreen = null;
+                checkForUpdates();
+            });
+        }
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         if (toolbar.getOverflowIcon() != null) {
@@ -172,6 +182,14 @@ public class MainActivity extends AppCompatActivity {
             bottomNav.setSelectedItemId(currentItemId);
         }
 
+        if (startupScreen == null) checkForUpdates();
+    }
+
+    public void onHomeContentReady() {
+        if (startupScreen != null) startupScreen.onContentReady();
+    }
+
+    private void checkForUpdates() {
         com.fimtale.crash.CrashFeedback.whenNoPendingReport(this, () -> UpdateChecker.checkUpdate(this, false));
     }
 

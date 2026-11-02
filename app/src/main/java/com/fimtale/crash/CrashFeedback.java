@@ -68,12 +68,17 @@ public final class CrashFeedback implements Application.ActivityLifecycleCallbac
         Runnable guarded = () -> {
             if (!activity.isFinishing() && !activity.isDestroyed() && feedback.pending == null) action.run();
         };
-        if (feedback.ready) guarded.run(); else feedback.afterCheck.add(guarded);
+        if (feedback.ready) {
+            feedback.showIfReady();
+            guarded.run();
+        } else feedback.afterCheck.add(guarded);
     }
     private void showIfReady() {
         Activity activity = resumed.get();
         if (!ready || presented || pending == null || !(activity instanceof FragmentActivity)
                 || activity instanceof LoginActivity || activity.isFinishing() || activity.isDestroyed()) return;
+        // Present recovery after the launch screen hands control to the page.
+        if (activity.findViewById(com.fimtale.R.id.startupScreen) != null) return;
         FragmentActivity host = (FragmentActivity) activity;
         if (host.getSupportFragmentManager().isStateSaved()) return;
         presented = true;

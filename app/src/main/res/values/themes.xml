@@ -75,6 +75,18 @@
         <item name="android:navigationBarColor">@color/navigation_surface</item>
     </style>
 
+    <!-- Android 12's system splash hands off immediately to the Lottie loading screen. -->
+    <style name="Theme.Fimtale.Starting" parent="Theme.Fimtale.MainActivity">
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
+        <item name="android:windowSplashScreenBackground">?android:attr/colorBackground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/startup_splash_placeholder</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+        <item name="android:statusBarColor">?android:attr/colorBackground</item>
+        <item name="android:navigationBarColor">?android:attr/colorBackground</item>
+        <item name="android:windowLightStatusBar">@bool/light_navigation_bar</item>
+    </style>
+
     <style name="Theme.Fimtale.FullTransparent" parent="Theme.Fimtale.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
