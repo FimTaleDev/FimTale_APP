@@ -8,7 +8,7 @@
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/timelineList"
             android:layout_width="match_parent" android:layout_height="match_parent"
             android:paddingTop="@dimen/page_margin"
-            android:paddingHorizontal="16dp" android:paddingBottom="16dp" android:clipToPadding="false"
+            android:paddingHorizontal="16dp" android:paddingBottom="@dimen/timeline_bottom_padding" android:clipToPadding="false"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
     </com.fimtale.ui.PullRefreshLayout>
     <com.fimtale.ui.ShimmerSkeletonView android:id="@+id/timelineSkeleton"

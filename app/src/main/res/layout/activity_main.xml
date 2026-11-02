@@ -43,11 +43,13 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
+    <!-- Draw the page behind the transparent area outside the top corners. -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         style="@style/Widget.Fimtale.TextBottomNavigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/bottom_navigation_overlap_margin"
         app:menu="@menu/bottom_nav_menu"
         android:background="@color/navigation_surface" />
 

@@ -129,7 +129,8 @@ public class ArticleFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         int padding = (int)(8 * getResources().getDisplayMetrics().density);
         int topPadding = getResources().getDimensionPixelSize(R.dimen.page_margin);
-        recyclerView.setPadding(padding, topPadding, padding, 0);
+        int bottomPadding = getResources().getDimensionPixelSize(R.dimen.bottom_navigation_corner_radius);
+        recyclerView.setPadding(padding, topPadding, padding, bottomPadding);
         recyclerView.setClipToPadding(false);
         recyclerView.setVisibility(View.GONE);
         

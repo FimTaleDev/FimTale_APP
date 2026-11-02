@@ -11,6 +11,7 @@
         android:id="@+id/profileScroll"
         android:layout_width="match_parent" android:layout_height="match_parent"
         android:paddingTop="@dimen/page_margin" android:clipToPadding="false"
+        android:paddingBottom="@dimen/bottom_navigation_corner_radius"
         android:fillViewport="true">
     <LinearLayout
         android:id="@+id/contentLayout"
@@ -184,7 +185,7 @@
                 app:layout_constraintWidth_percent="0.25" android:orientation="vertical" android:gravity="center" android:clickable="true"
                 android:focusable="true" android:background="?attr/selectableItemBackgroundBorderless" android:padding="8dp">
                 <com.fimtale.ui.icons.MdiImageView android:layout_width="@dimen/mdi_icon_size" android:layout_height="@dimen/mdi_icon_size"
-                    app:mdiIcon="delete-restore" app:tint="?attr/colorOnSurface"/>
+                    app:mdiIcon="delete" app:tint="?attr/colorOnSurface"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/recycle_title"
                     android:textSize="12sp" android:layout_marginTop="4dp" android:textColor="?attr/colorOnSurface"/>
             </LinearLayout>

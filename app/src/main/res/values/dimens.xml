@@ -6,4 +6,8 @@
     <dimen name="page_offset">24dp</dimen>
     <dimen name="input_corner_radius">20dp</dimen>
     <dimen name="message_bubble_corner_radius">20dp</dimen>
+    <dimen name="bottom_navigation_corner_radius">24dp</dimen>
+    <dimen name="bottom_navigation_overlap_margin">-24dp</dimen>
+    <!-- Keep the timeline's 16dp spacing above the overlapping navigation corners. -->
+    <dimen name="timeline_bottom_padding">40dp</dimen>
 </resources>
