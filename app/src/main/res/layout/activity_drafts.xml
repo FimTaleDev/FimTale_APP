@@ -2,8 +2,9 @@
     android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="?android:attr/colorBackground">
     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipChildren="false">
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/draftsList" android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingBottom="12dp"/>
-        <TextView android:id="@+id/draftsEmpty" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="center" android:gravity="center" android:padding="32dp"
-            android:text="@string/drafts_empty" android:textAppearance="?attr/textAppearanceBodyLarge" android:textColor="?attr/colorOnSurfaceVariant"/>
+        <com.fimtale.ui.PageErrorView android:id="@+id/draftsEmpty"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:visibility="gone" />
         <com.fimtale.ui.ShimmerSkeletonView android:id="@+id/draftsSkeleton"
             android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginTop="88dp"
             android:background="?android:attr/colorBackground" android:visibility="gone"/>

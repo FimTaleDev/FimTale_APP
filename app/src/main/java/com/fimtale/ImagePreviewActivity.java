@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
@@ -27,7 +26,7 @@ import com.fimtale.network.SiteUrls;
 public class ImagePreviewActivity extends AppCompatActivity {
     private PhotoView photo;
     private ProgressBar loading;
-    private LinearLayout error;
+    private com.fimtale.ui.PageErrorView error;
     private String url;
 
     @Override protected void onCreate(Bundle state) {
@@ -59,15 +58,13 @@ public class ImagePreviewActivity extends AppCompatActivity {
         });
         loading = new ProgressBar(this);
         root.addView(loading, new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER));
-        error = new LinearLayout(this);
-        error.setOrientation(LinearLayout.VERTICAL);
-        error.setGravity(Gravity.CENTER);
-        TextView message = label(getString(R.string.image_preview_load_failed));
-        error.addView(message);
-        TextView retry = label(getString(R.string.common_retry));
-        retry.setOnClickListener(v -> load());
-        error.addView(retry);
-        root.addView(error, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+        android.content.res.Configuration palette = new android.content.res.Configuration(getResources().getConfiguration());
+        palette.uiMode = (palette.uiMode & ~android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                | android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        android.content.Context errorContext = new android.view.ContextThemeWrapper(
+                createConfigurationContext(palette), R.style.Theme_Fimtale);
+        error = new com.fimtale.ui.PageErrorView(errorContext);
+        root.addView(error, new FrameLayout.LayoutParams(-1, -1));
         TextView close = label(getString(R.string.common_close));
         close.setContentDescription(getString(R.string.image_preview_close_description));
         close.setOnClickListener(v -> finish());
@@ -79,6 +76,7 @@ public class ImagePreviewActivity extends AppCompatActivity {
             closeParams.topMargin = safe.top;
             closeParams.rightMargin = safe.right + dp(8);
             close.setLayoutParams(closeParams);
+            error.setPadding(safe.left, safe.top, safe.right, safe.bottom);
             return insets;
         });
         setContentView(root);
@@ -93,13 +91,13 @@ public class ImagePreviewActivity extends AppCompatActivity {
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private void load() {
-        loading.setVisibility(View.VISIBLE); error.setVisibility(View.GONE);
+        loading.setVisibility(View.VISIBLE); error.hide();
         Glide.with(this).load(url).listener(new RequestListener<Drawable>() {
             @Override public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean first) {
-                loading.setVisibility(View.GONE); error.setVisibility(View.VISIBLE); return false;
+                loading.setVisibility(View.GONE); error.show(getString(R.string.image_preview_load_failed), ImagePreviewActivity.this::load); return false;
             }
             @Override public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource source, boolean first) {
-                loading.setVisibility(View.GONE); error.setVisibility(View.GONE); return false;
+                loading.setVisibility(View.GONE); error.hide(); return false;
             }
         }).into(photo);
     }

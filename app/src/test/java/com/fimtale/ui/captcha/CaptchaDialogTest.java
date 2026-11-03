@@ -79,7 +79,7 @@ public class CaptchaDialogTest {
         assertEquals("turnstile", state(dialog).get("provider"));
         Map<String, Object> failure = state(dialog);
         failure.put("escape", true); send(dialog, failure);
-        ((AlertDialog) dialog.requireDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        ((AlertDialog) dialog.requireDialog()).findViewById(R.id.pageErrorRetry).performClick();
         String switched = (String) state(dialog).get("provider");
         assertNotEquals("turnstile", switched);
         assertEquals("turnstile", CaptchaProviders.preferred(activity, available));
@@ -106,7 +106,7 @@ public class CaptchaDialogTest {
         Map<String, Object> stale = state(dialog);
         Map<String, Object> failure = state(dialog); failure.put("escape", true);
         send(dialog, failure);
-        ((AlertDialog) dialog.requireDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        ((AlertDialog) dialog.requireDialog()).findViewById(R.id.pageErrorRetry).performClick();
         stale.put("token", "old-token"); send(dialog, stale);
         Map<String, Object> wrong = state(dialog); wrong.put("provider", "unknown"); wrong.put("token", "wrong-token");
         send(dialog, wrong);
@@ -140,22 +140,22 @@ public class CaptchaDialogTest {
     @Test public void nativeMaterialControlsShowProgressAndErrorsAndSwitchWithoutDismissing() {
         CaptchaDialogFragment fragment = open();
         AlertDialog dialog = (AlertDialog) fragment.requireDialog();
-        assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE) instanceof com.google.android.material.button.MaterialButton);
-        assertEquals(View.GONE, dialog.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+        assertTrue(dialog.findViewById(R.id.pageErrorRetry) instanceof com.google.android.material.button.MaterialButton);
+        assertEquals(View.GONE, dialog.findViewById(R.id.captchaError).getVisibility());
         assertEquals(View.VISIBLE, dialog.findViewById(R.id.captchaProgress).getVisibility());
         Map<String, Object> loaded = state(fragment); loaded.put("loaded", true); send(fragment, loaded);
         assertEquals(View.GONE, dialog.findViewById(R.id.captchaStatusPanel).getVisibility());
         Map<String, Object> failure = state(fragment); failure.put("escape", true); failure.put("reason", "unsupported_browser");
         send(fragment, failure);
-        assertEquals(View.VISIBLE, dialog.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+        assertEquals(View.VISIBLE, dialog.findViewById(R.id.captchaError).getVisibility());
         assertEquals(View.GONE, dialog.findViewById(R.id.captchaProgress).getVisibility());
-        assertEquals(activity.getString(R.string.captcha_unsupported), ((TextView) dialog.findViewById(R.id.captchaStatus)).getText().toString());
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        assertEquals(activity.getString(R.string.captcha_unsupported), ((TextView) dialog.findViewById(R.id.captchaError).findViewById(R.id.pageErrorMessage)).getText().toString());
+        dialog.findViewById(R.id.pageErrorRetry).performClick();
         assertTrue(dialog.isShowing());
         assertNotEquals("turnstile", state(fragment).get("provider"));
-        assertEquals(View.GONE, dialog.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+        assertEquals(View.GONE, dialog.findViewById(R.id.captchaError).getVisibility());
         assertEquals(View.VISIBLE, dialog.findViewById(R.id.captchaProgress).getVisibility());
         send(fragment, failure);
-        assertEquals(View.GONE, dialog.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+        assertEquals(View.GONE, dialog.findViewById(R.id.captchaError).getVisibility());
     }
 }

@@ -273,7 +273,7 @@ public abstract class InboxActivity extends AppCompatActivity {
                 else rows.addAll(Inbox.groups(model.notices));
                 if (!model.error.isEmpty()) rows.add("error");
                 if (model.loading && model.conversation == null) rows.add("loading");
-                else if (!model.loading && model.loaded && (model.conversation == null ? (model.tab == 3 ? model.conversations.isEmpty() : model.notices.isEmpty()) : model.messages.isEmpty())) rows.add("empty");
+                else if (!model.loading && model.error.isEmpty() && model.loaded && (model.conversation == null ? (model.tab == 3 ? model.conversations.isEmpty() : model.notices.isEmpty()) : model.messages.isEmpty())) rows.add("empty");
                 if (model.more && model.conversation == null) rows.add("more");
             }
             notifyDataSetChanged();
@@ -296,6 +296,9 @@ public abstract class InboxActivity extends AppCompatActivity {
         }
         @Override public void onBindViewHolder(@NonNull Holder holder, int position) {
             LinearLayout row = holder.body; row.setGravity(Gravity.START); row.removeAllViews(); Object item = rows.get(position);
+            boolean pageState = "login".equals(item) || "error".equals(item) || "empty".equals(item);
+            row.setPadding(pageState ? 0 : dp(16), pageState ? 0 : dp(12), pageState ? 0 : dp(16), pageState ? 0 : dp(12));
+            if (item instanceof Inbox.Conversation || item instanceof Inbox.Message || "loading".equals(item)) row.setPadding(0, 0, 0, 0);
             holder.card.setCardBackgroundColor(item instanceof Inbox.Message || "loading".equals(item) && model.conversation != null ? getColor(R.color.message_chat_background)
                     : MaterialColors.getColor(row, com.google.android.material.R.attr.colorSurface));
             if ("loading".equals(item) && (getResources().getConfiguration().uiMode
@@ -304,7 +307,7 @@ public abstract class InboxActivity extends AppCompatActivity {
             }
             if (item instanceof String) {
                 switch ((String)item) {
-                    case "login": text(row, getString(R.string.inbox_login_message), 18, true); button(row, getString(R.string.login_title), () -> DialogHelper.openLogin(InboxActivity.this)); break;
+                    case "login": com.fimtale.ui.PageErrorView.addTo(row).showLogin(getString(R.string.inbox_login_message), () -> DialogHelper.openLogin(InboxActivity.this)); break;
                     case "loading":
                         ShimmerSkeletonView skeleton = new ShimmerSkeletonView(InboxActivity.this);
                         skeleton.setSkeletonLayout(model.conversation != null ? ShimmerSkeletonView.Layout.CHAT
@@ -312,8 +315,10 @@ public abstract class InboxActivity extends AppCompatActivity {
                         int height = model.loaded ? dp(160) : Math.max(dp(320), list.getHeight());
                         row.addView(skeleton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height));
                         break;
-                    case "error": text(row, model.error, 14, false); button(row, getString(R.string.common_retry), model::retry); break;
-                    case "empty": text(row, model.tab == 3 ? getString(R.string.inbox_no_conversations) : getString(R.string.inbox_no_notifications), 16, false); break;
+                    case "error": com.fimtale.ui.PageErrorView.addTo(row).show(model.error, model::retry); break;
+                    case "empty": com.fimtale.ui.PageErrorView.addTo(row).showEmpty(getString(model.conversation != null
+                            ? R.string.inbox_no_messages : model.tab == 3 ? R.string.inbox_no_conversations
+                            : R.string.inbox_no_notifications), () -> model.load(false)); break;
                     case "more": button(row, getString(R.string.common_load_more), () -> model.load(true)); break;
                     case "earlier": button(row, getString(R.string.inbox_load_earlier), () -> model.load(true)); break;
                     case "summary":

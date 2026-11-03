@@ -45,9 +45,10 @@ public final class TimelineFragment extends Fragment {
     private RecyclerView list;
     private PullRefreshLayout refresh;
     private ShimmerSkeletonView skeleton;
-    private View state, composeCard;
-    private TextView stateTitle, composeHint, footerText;
-    private MaterialButton stateAction, composeAction, loadMore;
+    private View composeCard;
+    private PageErrorView state, footerState;
+    private TextView composeHint, footerText;
+    private MaterialButton composeAction, loadMore;
     private TimelineAdapter adapter;
     private PageErrorView pageError;
 
@@ -63,14 +64,13 @@ public final class TimelineFragment extends Fragment {
         skeleton = view.findViewById(R.id.timelineSkeleton);
         skeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.COMMENTS);
         state = view.findViewById(R.id.timelineState);
-        stateTitle = view.findViewById(R.id.timelineStateTitle);
-        stateAction = view.findViewById(R.id.timelineStateAction);
         View header = getLayoutInflater().inflate(R.layout.item_timeline_header, list, false);
         View footer = getLayoutInflater().inflate(R.layout.item_timeline_footer, list, false);
         composeCard = header.findViewById(R.id.timelineComposeCard);
         composeHint = header.findViewById(R.id.timelineComposeHint);
         composeAction = header.findViewById(R.id.timelineComposeAction);
         footerText = footer.findViewById(R.id.timelineFooterText);
+        footerState = footer.findViewById(R.id.timelineEmptyState);
         loadMore = footer.findViewById(R.id.timelineLoadMore);
         adapter = new TimelineAdapter(requireContext(), feed.items, reposting, this::repost);
         list.setAdapter(new ConcatAdapter(new Row(header), adapter, new Row(footer)));
@@ -79,10 +79,6 @@ public final class TimelineFragment extends Fragment {
         refresh.setOnRefreshListener(() -> {
             load(true);
             loadAuth();
-        });
-        stateAction.setOnClickListener(v -> {
-            if (UserPreferences.isLoggedIn(requireContext())) { load(true); loadAuth(); }
-            else startActivity(new Intent(requireContext(), LoginActivity.class));
         });
         loadMore.setOnClickListener(v -> load(error != null && failedReset));
         composeAction.setOnClickListener(v -> compose());
@@ -268,9 +264,9 @@ public final class TimelineFragment extends Fragment {
         refresh.setEnabled(!guest);
         skeleton.setVisibility(replacing ? View.VISIBLE : View.GONE);
         list.setVisibility(guest || replacing ? View.INVISIBLE : View.VISIBLE);
-        state.setVisibility(guest ? View.VISIBLE : View.GONE);
-        stateTitle.setText(guest ? getString(R.string.timeline_login_message) : error);
-        stateAction.setText(guest ? getString(R.string.common_login) : getString(R.string.common_retry));
+        if (guest) state.showLogin(getString(R.string.timeline_login_message),
+                () -> startActivity(new Intent(requireContext(), LoginActivity.class)));
+        else state.hide();
         boolean canPost = !guest && auth != null && auth.canPost();
         boolean needsSpace = !guest && auth != null && auth.needsSpace();
         composeCard.setVisibility(canPost || needsSpace ? View.VISIBLE : View.GONE);
@@ -278,11 +274,14 @@ public final class TimelineFragment extends Fragment {
         composeAction.setText(canPost ? getString(R.string.timeline_post) : activating ? getString(R.string.timeline_opening_space) : getString(R.string.timeline_open_space));
         composeAction.setEnabled(!activating && !loadingAuth);
         composeCard.setEnabled(!activating && !loadingAuth);
-        footerText.setText(error != null ? error : loading ? getString(R.string.common_loading_active)
-                : feed.items.isEmpty() ? getString(R.string.timeline_empty)
-                : feed.finished ? getString(R.string.common_list_end) : "");
+        boolean empty = !guest && !loading && error == null && feed.items.isEmpty();
+        if (!guest && !loading && error != null) footerState.show(error, () -> load(failedReset));
+        else if (empty) footerState.showEmpty(getString(R.string.timeline_empty), () -> { load(true); loadAuth(); });
+        else footerState.hide();
+        footerText.setText(loading ? getString(R.string.common_loading_active)
+                : !empty && error == null && feed.finished ? getString(R.string.common_list_end) : "");
         footerText.setVisibility(footerText.length() > 0 ? View.VISIBLE : View.GONE);
-        loadMore.setVisibility(!guest && (error != null || !feed.finished) ? View.VISIBLE : View.GONE);
+        loadMore.setVisibility(!guest && !empty && error == null && !feed.finished ? View.VISIBLE : View.GONE);
         loadMore.setEnabled(!loading);
         loadMore.setText(error != null ? getString(R.string.common_retry) : loading ? getString(R.string.common_loading) : getString(R.string.common_load_more));
     }
@@ -292,8 +291,8 @@ public final class TimelineFragment extends Fragment {
         cancelCalls(); reposting.clear();
         if (list != null) list.setAdapter(null);
         list = null; adapter = null; refresh = null; skeleton = null; state = null; composeCard = null;
-        pageError = null;
-        stateTitle = composeHint = footerText = null; stateAction = composeAction = loadMore = null;
+        pageError = footerState = null;
+        composeHint = footerText = null; composeAction = loadMore = null;
         super.onDestroyView();
     }
     private static final class Row extends RecyclerView.Adapter<RecyclerView.ViewHolder> {

@@ -29,9 +29,9 @@
             android:clipToPadding="false" android:padding="8dp" />
         <ProgressBar android:id="@+id/communityProgress" android:layout_width="48dp"
             android:layout_height="48dp" android:layout_gravity="center" android:visibility="gone" />
-        <TextView android:id="@+id/communityStatus" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:layout_gravity="center" android:padding="24dp"
-            android:text="@string/community_empty" android:textColor="?attr/colorOnSurfaceVariant" android:visibility="gone" />
+        <com.fimtale.ui.PageErrorView android:id="@+id/communityStatus"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:visibility="gone" />
     </FrameLayout>
     <LinearLayout android:id="@+id/communityPager" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center"

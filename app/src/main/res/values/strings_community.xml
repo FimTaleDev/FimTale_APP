@@ -41,8 +41,8 @@
     <string name="community_followers">粉丝</string>
     <string name="community_browse_user">查看全部内容</string>
     <string name="community_empty">暂无内容</string>
-    <string name="community_empty_tags">还没有关注的标签，点击浏览标签</string>
-    <string name="community_load_failed">加载失败，点击重试</string>
+    <string name="community_empty_tags">还没有关注的标签</string>
+    <string name="community_load_failed">加载失败</string>
     <string name="community_all_folders">全部作品</string>
     <string name="community_manage_folders">管理文件夹</string>
     <string name="community_create_folder">新建文件夹</string>

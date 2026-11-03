@@ -60,16 +60,16 @@ public final class ReviewQueueAdapter extends RecyclerView.Adapter<RecyclerView.
         }
     }
     private void footer(View view) {
+        com.fimtale.ui.PageErrorView state = (com.fimtale.ui.PageErrorView) view;
         String message = model.error;
         if (message.isEmpty() && model.uncertain) message = activity.getString(R.string.review_action_uncertain);
-        if (message.isEmpty() && !model.loading && rows.isEmpty()) message = activity.getString(empty[section.ordinal()]);
-        text(view, R.id.reviewMessage, message); visible(view, R.id.reviewMessage, !message.isEmpty());
-        visible(view, R.id.reviewRetry, !model.loading && (!model.error.isEmpty() || model.uncertain));
-        text(view, R.id.reviewRetry, activity.getString(model.needsLogin ? R.string.review_login : R.string.review_retry));
-        view.findViewById(R.id.reviewRetry).setEnabled(!model.mutating);
-        view.findViewById(R.id.reviewRetry).setOnClickListener(v -> {
-            if (model.needsLogin) activity.startActivity(new Intent(activity, LoginActivity.class)); else model.refresh();
-        });
+        if (model.loading) state.hide();
+        else if (model.needsLogin) state.showLogin(message,
+                () -> activity.startActivity(new Intent(activity, LoginActivity.class)));
+        else if (!message.isEmpty()) state.show(message, model::refresh);
+        else if (rows.isEmpty()) state.showEmpty(activity.getString(empty[section.ordinal()]), model::refresh);
+        else state.hide();
+        state.setActionEnabled(!model.mutating);
     }
     private void row(View view, ReviewEntry entry) {
         view.setBackgroundColor(activity.isHighlighted(entry)

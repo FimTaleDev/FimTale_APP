@@ -78,13 +78,15 @@ public class DraftsActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.tvToolbarTitle)).setText(R.string.drafts_title);
         toolbar.setNavigationOnClickListener(v -> finish());
         RecyclerView list = findViewById(R.id.draftsList);
-        pageError = com.fimtale.ui.PageErrorView.wrap(list);
+        View listSurface = com.fimtale.ui.PageErrorView.withEmptyState(list, findViewById(R.id.draftsEmpty));
+        pageError = com.fimtale.ui.PageErrorView.wrap(listSurface);
         loadingSkeleton = findViewById(R.id.draftsSkeleton);
         loadingSkeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.DRAFTS);
         summaryText = getString(R.string.drafts_local_hint);
         list.setLayoutManager(new LinearLayoutManager(this)); list.setAdapter(new ConcatAdapter(summaryAdapter, adapter));
         list.setItemAnimator(null);
-        com.fimtale.ui.PullToRefresh.attach(list, this::refresh, () -> !loading);
+        com.fimtale.ui.PullToRefresh.attach(listSurface, this::refresh, () -> !loading,
+                () -> list.canScrollVertically(-1));
         View titleCard = findViewById(R.id.toolbarContainer);
         // The list scrolls behind the fixed card, including its summary row.
         titleCard.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -102,7 +104,6 @@ public class DraftsActivity extends AppCompatActivity {
             if (!UserPreferences.isLoggedIn(this)) { login.launch(new Intent(this, LoginActivity.class)); return; }
             startActivity(EditorActivity.workIntent(this, 0));
         });
-        findViewById(R.id.draftsEmpty).setOnClickListener(v -> refresh());
         if (state == null && !UserPreferences.isLoggedIn(this)) login.launch(new Intent(this, LoginActivity.class));
     }
     private void setDraftsLoading(boolean loading) {
@@ -112,7 +113,9 @@ public class DraftsActivity extends AppCompatActivity {
         boolean replacing = loading && !com.fimtale.ui.PullToRefresh.isRefreshing(list);
         loadingSkeleton.setVisibility(replacing ? View.VISIBLE : View.GONE);
         list.setVisibility(replacing ? View.INVISIBLE : View.VISIBLE);
-        findViewById(R.id.draftsEmpty).setVisibility(!loading && items.isEmpty() ? View.VISIBLE : View.GONE);
+        com.fimtale.ui.PageErrorView empty = findViewById(R.id.draftsEmpty);
+        if (!loading && items.isEmpty()) empty.showEmpty(getString(R.string.drafts_empty), this::refresh);
+        else empty.hide();
         findViewById(R.id.draftsCreate).setEnabled(!loading);
     }
     private void animateHeader(boolean raised) {
@@ -179,9 +182,7 @@ public class DraftsActivity extends AppCompatActivity {
                     if (isFinishing() || isDestroyed() || current != generation || !token.equals(UserPreferences.getToken(this))) return;
                     items.clear(); items.addAll(drafts); adapter.notifyDataSetChanged();
                     setDraftsLoading(false);
-                    TextView empty = findViewById(R.id.draftsEmpty); empty.setText(R.string.drafts_empty);
-                    if (notice != null && items.isEmpty()) empty.setText(getString(R.string.drafts_online_load_failed_tap));
-                    empty.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+                    com.fimtale.ui.PageErrorView empty = findViewById(R.id.draftsEmpty);
                     summaryText = notice == null ? getString(R.string.drafts_count, items.size()) : notice;
                     summaryAdapter.notifyItemChanged(0);
                     if (onlineFailed) {
@@ -193,7 +194,7 @@ public class DraftsActivity extends AppCompatActivity {
                 main.post(() -> {
                     if (isFinishing() || isDestroyed() || current != generation || !token.equals(UserPreferences.getToken(this))) return;
                     setDraftsLoading(false);
-                    TextView empty = findViewById(R.id.draftsEmpty); empty.setText(getString(R.string.drafts_load_failed_tap));
+                    com.fimtale.ui.PageErrorView empty = findViewById(R.id.draftsEmpty);
                     summaryText = getString(R.string.drafts_load_failed_tap);
                     summaryAdapter.notifyItemChanged(0);
                     empty.setVisibility(View.GONE);

@@ -41,20 +41,19 @@ public class HomeFragment extends Fragment {
 
     private PullRefreshLayout swipeRefreshLayout;
     private RecyclerView homeList;
-    private LinearLayout emptyStateLayout;
+    private PageErrorView emptyStateLayout;
     private LinearLayout quickAccessLayout;
     private LinearLayout btnGallery;
     private LinearLayout btnPosts;
     private LinearLayout btnTags;
     private LinearLayout btnChannels;
-    private Button btnLogin;
     private TabLayout tabLayout;
     private ViewPager2 bannerViewPager;
     private ShimmerSkeletonView loadingSkeleton;
     private final List<Call<?>> homeCalls = new ArrayList<>();
     private int pendingHomeRequests;
     private String homeError;
-    private TextView errorTextView;
+    private PageErrorView emptyTopics;
     private Button viewMoreButton;
     private BannerAdapter bannerAdapter;
     private TopicAdapter topicAdapter;
@@ -113,11 +112,10 @@ public class HomeFragment extends Fragment {
         btnChannels = header.findViewById(R.id.btnChannels);
         loadingSkeleton = view.findViewById(R.id.loadingSkeleton);
         loadingSkeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.HOME);
-        errorTextView = view.findViewById(R.id.errorTextView);
+        emptyTopics = footer.findViewById(R.id.homeEmptyTopics);
         tabLayout = header.findViewById(R.id.tabLayout);
         viewMoreButton = footer.findViewById(R.id.viewMoreButton);
         emptyStateLayout = view.findViewById(R.id.emptyStateLayout);
-        btnLogin = view.findViewById(R.id.btnLogin);
 
         setupBannerViewPager();
         setupRecyclerView(header, footer);
@@ -151,9 +149,9 @@ public class HomeFragment extends Fragment {
     }
 
     private void setupEmptyState() {
-        btnLogin.setOnClickListener(v -> {
-            DialogHelper.openLogin(requireContext());
-        });
+        emptyStateLayout.showLogin(getString(R.string.profile_login_message),
+                () -> DialogHelper.openLogin(requireContext()));
+        emptyStateLayout.setVisibility(View.GONE);
     }
 
     private void loadContent() {
@@ -231,6 +229,9 @@ public class HomeFragment extends Fragment {
         visibleTopics.clear();
         visibleTopics.addAll(selectedTab == 0 ? topicListHot : topicListNew);
         topicAdapter.notifyDataSetChanged();
+        if (pendingHomeRequests == 0 && homeError == null && visibleTopics.isEmpty())
+            emptyTopics.showEmpty(getString(R.string.work_empty), this::fetchHomePageData);
+        else emptyTopics.hide();
     }
 
     private static final class StaticRowAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -252,7 +253,7 @@ public class HomeFragment extends Fragment {
         stopBannerAutoScroll();
         boolean pulling = swipeRefreshLayout.isRefreshing();
         loadingSkeleton.setVisibility(pulling ? View.GONE : View.VISIBLE);
-        errorTextView.setVisibility(View.GONE);
+        emptyTopics.hide();
         homeList.setVisibility(pulling ? View.VISIBLE : View.INVISIBLE);
         homeList.scrollToPosition(0);
         quickAccessLayout.setVisibility(View.VISIBLE);

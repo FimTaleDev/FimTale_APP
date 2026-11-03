@@ -64,14 +64,8 @@
                 android:layout_height="match_parent"
                 android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/readerCommentsStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:padding="16dp"
-                android:textColor="?attr/colorOnSurfaceVariant"
+            <com.fimtale.ui.PageErrorView android:id="@+id/readerCommentsStatus"
+                android:layout_width="match_parent" android:layout_height="match_parent"
                 android:visibility="gone" />
         </FrameLayout>
     </com.fimtale.ui.PullRefreshLayout>

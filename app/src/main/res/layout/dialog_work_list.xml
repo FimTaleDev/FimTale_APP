@@ -14,9 +14,9 @@
             android:layout_height="match_parent" android:clipToPadding="false" android:paddingBottom="8dp"/>
         <com.fimtale.ui.ShimmerSkeletonView android:id="@+id/workListSkeleton"
             android:layout_width="match_parent" android:layout_height="match_parent"/>
-        <TextView android:id="@+id/workListStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_gravity="center" android:gravity="center" android:padding="24dp" android:visibility="gone"
-            android:textColor="?attr/colorOnSurfaceVariant"/>
+        <com.fimtale.ui.PageErrorView android:id="@+id/workListStatus"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:visibility="gone" />
     </FrameLayout>
     <LinearLayout android:id="@+id/workListPager" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center_vertical" android:paddingHorizontal="16dp" android:orientation="horizontal">

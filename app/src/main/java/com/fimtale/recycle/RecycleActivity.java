@@ -32,7 +32,7 @@ public class RecycleActivity extends ModuleActivity {
         if(loginRequired())return;selectTab(state.tab);errors();
         if(state.entries.size()==0&&(state.loading("header")||state.loading("page"))&&state.errors.isEmpty()){loadingBlocks(3);return;}
         String[] statuses=getResources().getStringArray(R.array.recycle_statuses);
-        if(!state.loading("page")&&state.entries.size()==0&&state.errors.isEmpty())text(content,R.string.recycle_empty);
+        if(!state.loading("page")&&state.entries.size()==0&&state.errors.isEmpty())empty(R.string.recycle_empty);
         for(JsonElement value:state.entries){JsonObject entry=obj(value);int id=num(entry,"id"),type=num(entry,"type"),status=num(entry,"status_del");
             LinearLayout box=column(content);String title=str(entry,"title");if(title.isEmpty())title="#"+id;heading(box,title);
             text(box,getString(R.string.recycle_meta,id,str(entry,"username"),status>=0&&status<statuses.length?statuses[status]:"",str(entry,"updated_at")));

@@ -6,7 +6,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
+import com.fimtale.ui.PageErrorView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -53,10 +55,20 @@ public class PageErrorDeviceTest {
                 .build().create(FimTaleApiService.class));
     }
     @After public void cleanup() throws Exception { service.set(null, originalApi); }
+    private PageErrorView shownError(View view) {
+        if (view.getVisibility() != View.VISIBLE) return null;
+        if (view instanceof PageErrorView) return ((TextView) view.findViewById(R.id.pageErrorTitle))
+                .getText().equals(view.getContext().getText(R.string.page_error_title)) ? (PageErrorView) view : null;
+        if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
+            PageErrorView found = shownError(((ViewGroup) view).getChildAt(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
     private void await(ActivityScenario<HistoryActivity> scenario, boolean error) {
         long until = SystemClock.uptimeMillis() + 6000; AtomicBoolean done = new AtomicBoolean();
         while (!done.get() && SystemClock.uptimeMillis() < until) {
-            scenario.onActivity(activity -> done.set(activity.findViewById(R.id.pageErrorRetry).isShown() == error
+            scenario.onActivity(activity -> done.set((shownError(activity.findViewById(android.R.id.content)) != null) == error
                     && activity.findViewById(R.id.loadingSkeleton).getVisibility() == View.GONE));
             SystemClock.sleep(40);
         }
@@ -67,7 +79,7 @@ public class PageErrorDeviceTest {
             await(scenario, true);
             scenario.onActivity(activity -> {
                 assertTrue(activity.findViewById(R.id.toolbarContainer).isShown());
-                TextView title = activity.findViewById(R.id.pageErrorTitle);
+                TextView title = shownError(activity.findViewById(android.R.id.content)).findViewById(R.id.pageErrorTitle);
                 assertEquals("加载失败", title.getText().toString());
                 int[] header = new int[2], text = new int[2];
                 activity.findViewById(R.id.toolbarContainer).getLocationOnScreen(header); title.getLocationOnScreen(text);
@@ -79,10 +91,10 @@ public class PageErrorDeviceTest {
             }
             bitmap.recycle();
             failing = false;
-            scenario.onActivity(activity -> activity.findViewById(R.id.pageErrorRetry).performClick());
+            scenario.onActivity(activity -> shownError(activity.findViewById(android.R.id.content)).findViewById(R.id.pageErrorRetry).performClick());
             await(scenario, false);
-            scenario.onActivity(activity -> assertEquals("暂无历史记录，点击刷新",
-                    ((TextView) activity.findViewById(R.id.loadingStatus)).getText().toString()));
+            scenario.onActivity(activity -> assertEquals("暂无历史记录",
+                    ((TextView) activity.findViewById(R.id.loadingStatus).findViewById(R.id.pageErrorMessage)).getText().toString()));
             int before = reads.get();
             int[] point = new int[2], size = new int[2];
             scenario.onActivity(activity -> {

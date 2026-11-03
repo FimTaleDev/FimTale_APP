@@ -134,7 +134,7 @@ public class ReaderCommentsPanelTest {
             assertFalse(refresh.isRefreshing());
             assertEquals(1, list.getAdapter().getItemCount());
             assertEquals(View.VISIBLE, errorView(root).getVisibility());
-            root.findViewById(R.id.pageErrorRetry).performClick();
+            errorView(root).findViewById(R.id.pageErrorRetry).performClick();
             comments(101, 1, "asc").reply(data(101, 1));
         }
 
@@ -142,7 +142,8 @@ public class ReaderCommentsPanelTest {
         comments(101, 1, "asc").reply(data(101, 0));
         assertFalse(refresh.isRefreshing());
         assertEquals(0, list.getAdapter().getItemCount());
-        assertEquals("暂无评论，下拉刷新", text(R.id.readerCommentsStatus));
+        assertEquals("暂无评论", ((TextView) root.findViewById(R.id.readerCommentsStatus)
+                .findViewById(R.id.pageErrorMessage)).getText().toString());
         pull();
         assertTrue(refresh.isRefreshing());
         comments(101, 1, "asc").reply(data(101, 1));

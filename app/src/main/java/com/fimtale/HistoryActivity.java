@@ -43,7 +43,7 @@ public class HistoryActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private ShimmerSkeletonView loadingSkeleton;
     private LoadingCardAdapter loadingFooter;
-    private TextView loadingStatus;
+    private com.fimtale.ui.PageErrorView loadingStatus;
     private Call<HistoryResponse> activeCall;
     private Call<Void> deleteCall;
     private AlertDialog deleteDialog;
@@ -90,10 +90,10 @@ public class HistoryActivity extends AppCompatActivity {
         loadingSkeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.HISTORY);
         loadingFooter = new LoadingCardAdapter(ShimmerSkeletonView.Layout.HISTORY_ROW);
         loadingStatus = findViewById(R.id.loadingStatus);
-        loadingStatus.setOnClickListener(v -> loadHistory(1));
 
         recyclerView = findViewById(R.id.recyclerView);
-        pageError = PageErrorView.wrap(recyclerView);
+        View listSurface = PageErrorView.withEmptyState(recyclerView, loadingStatus);
+        pageError = PageErrorView.wrap(listSurface);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         findViewById(R.id.historyAppBar).addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             recyclerView.setPadding(recyclerView.getPaddingLeft(), bottom,
@@ -162,7 +162,7 @@ public class HistoryActivity extends AppCompatActivity {
         adapter.setOnSelectionChangedListener(this::updateSelectionUi);
         recyclerView.setAdapter(new ConcatAdapter(adapter, loadingFooter));
         recyclerView.setItemAnimator(null);
-        PullToRefresh.attach(recyclerView, () -> loadHistory(1), () -> !isBusy());
+        PullToRefresh.attach(listSurface, () -> loadHistory(1), () -> !isBusy(), () -> recyclerView.canScrollVertically(-1));
 
         loadHistory(1);
     }
@@ -209,7 +209,7 @@ public class HistoryActivity extends AppCompatActivity {
                     finishLoading();
                     if (replacement != null && lastPage == 1) recyclerView.scrollToPosition(0);
                     if (adapter.getItemCount() == 0) {
-                        loadingStatus.setText(getString(R.string.history_empty));
+                        loadingStatus.showEmpty(getString(R.string.history_empty), () -> loadHistory(1));
                         loadingStatus.setVisibility(View.VISIBLE);
                     }
                 } else showLoadError(replacement != null ? 1 : page, lastPage, ApiErrors.message(response));

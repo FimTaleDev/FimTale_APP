@@ -176,8 +176,8 @@ public class TimelineDeviceTest {
             selectTimeline(scenario);
             await(scenario, activity -> activity.findViewById(R.id.timelineState) != null && activity.findViewById(R.id.timelineState).isShown());
             scenario.onActivity(activity -> {
-                assertEquals("登录后查看关注动态", ((TextView) activity.findViewById(R.id.timelineStateTitle)).getText().toString());
-                activity.findViewById(R.id.timelineStateAction).performClick();
+                assertEquals("登录后查看关注动态", ((TextView) activity.findViewById(R.id.timelineState).findViewById(R.id.pageErrorMessage)).getText().toString());
+                activity.findViewById(R.id.timelineState).findViewById(R.id.pageErrorRetry).performClick();
             });
             assertEquals(1, monitor.getHits()); assertEquals(0, firstPageReads.get());
         } finally { instrumentation.removeMonitor(monitor); }
@@ -194,7 +194,7 @@ public class TimelineDeviceTest {
             holdFeed.countDown();
             await(scenario, activity -> activity.findViewById(R.id.timelineState).isShown());
             scenario.onActivity(activity -> {
-                assertEquals("登录后查看关注动态", ((TextView) activity.findViewById(R.id.timelineStateTitle)).getText().toString());
+                assertEquals("登录后查看关注动态", ((TextView) activity.findViewById(R.id.timelineState).findViewById(R.id.pageErrorMessage)).getText().toString());
                 assertFalse(activity.findViewById(R.id.timelineList).isShown());
                 assertEquals(2, ((RecyclerView) activity.findViewById(R.id.timelineList)).getAdapter().getItemCount());
             });

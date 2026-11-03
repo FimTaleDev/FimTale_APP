@@ -72,7 +72,7 @@ public class ChannelDirectoryActivity extends ModuleActivity {
         if (state.tab == 1 && loginRequired()) return;
         if (state.tab == 0) renderSearchBar();
         if (state.channels.size() == 0 && state.loading("page") && !state.errors.containsKey("page")) { loadingBlocks(3); return; }
-        if (!state.loading("page") && state.channels.size() == 0 && !state.errors.containsKey("page")) text(content, R.string.modules_empty);
+        if (!state.loading("page") && state.channels.size() == 0 && !state.errors.containsKey("page")) empty(R.string.modules_empty);
         for (JsonElement value : state.channels) {
             JsonObject channel = obj(value); int id = num(channel, "id"); if (id <= 0) continue;
             MaterialCardView card = new MaterialCardView(this);

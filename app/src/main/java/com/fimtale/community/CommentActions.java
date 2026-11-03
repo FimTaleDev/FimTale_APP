@@ -251,18 +251,28 @@ public final class CommentActions implements DefaultLifecycleObserver {
     }
     public void history(Comment comment) {
         String token = UserPreferences.getToken(activity);
-        TextView loading = new TextView(activity); loading.setPadding(48, 24, 48, 24); loading.setText(R.string.common_loading_active);
-        ScrollView scroll = new ScrollView(activity); scroll.addView(loading);
+        ScrollView scroll = new ScrollView(activity);
+        android.widget.FrameLayout content = new android.widget.FrameLayout(activity);
+        content.addView(scroll, new android.widget.FrameLayout.LayoutParams(-1, -2));
+        com.fimtale.ui.PageErrorView state = com.fimtale.ui.PageErrorView.wrap(scroll);
         AlertDialog dialog = new MaterialAlertDialogBuilder(activity).setTitle(R.string.community_comment_history)
-                .setView(scroll).setPositiveButton(R.string.common_confirm, null).show(); dialogs.add(dialog);
+                .setView(content).setPositiveButton(R.string.common_confirm, null).show(); dialogs.add(dialog);
+        loadHistory(comment, token, dialog, scroll, state);
+    }
+    private void loadHistory(Comment comment, String token, AlertDialog dialog, ScrollView scroll,
+            com.fimtale.ui.PageErrorView state) {
+        if (!valid(token) || !dialog.isShowing()) return;
+        state.hide();
+        TextView loading = new TextView(activity); loading.setPadding(48, 24, 48, 24); loading.setText(R.string.common_loading_active);
+        scroll.removeAllViews(); scroll.addView(loading);
         Call<List<Community.CommentHistory>> call = RetrofitClient.getInstance().getCommentHistory(token, comment.id); calls.add(call);
         dialog.setOnDismissListener(d -> call.cancel());
         call.enqueue(new Callback<List<Community.CommentHistory>>() {
             @Override public void onResponse(Call<List<Community.CommentHistory>> request, Response<List<Community.CommentHistory>> response) {
                 if (!valid(token) || !dialog.isShowing()) return;
-                if (!response.isSuccessful()) { loading.setText(ApiErrors.message(response)); return; }
+                if (!response.isSuccessful()) { state.show(ApiErrors.message(response), () -> loadHistory(comment, token, dialog, scroll, state)); return; }
                 List<Community.CommentHistory> history = response.body();
-                if (history == null || history.isEmpty()) { loading.setText(R.string.community_no_history); return; }
+                if (history == null || history.isEmpty()) { state.showEmpty(activity.getString(R.string.community_no_history)); return; }
                 LinearLayout entries = new LinearLayout(activity); entries.setOrientation(LinearLayout.VERTICAL); entries.setPadding(48, 8, 48, 24);
                 for (Community.CommentHistory item : history) {
                     TextView time = new TextView(activity); time.setText(activity.getString(R.string.community_previous_content, item.created_at)); entries.addView(time);
@@ -272,7 +282,8 @@ public final class CommentActions implements DefaultLifecycleObserver {
                 scroll.removeAllViews(); scroll.addView(entries);
             }
             @Override public void onFailure(Call<List<Community.CommentHistory>> request, Throwable failure) {
-                if (valid(token) && dialog.isShowing() && !request.isCanceled()) loading.setText(R.string.community_load_failed);
+                if (valid(token) && dialog.isShowing() && !request.isCanceled()) state.show(activity.getString(R.string.community_load_failed),
+                        () -> loadHistory(comment, token, dialog, scroll, state));
             }
         });
     }

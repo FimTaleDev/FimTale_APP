@@ -98,7 +98,8 @@ public final class TagPickerDialog {
                         else { selected.remove(tag.getId()); groups.remove(tag.getId()); } changed.run();
                     }); tags.addView(chip);
                 }
-                status.setText(count == 0 ? context.getString(R.string.tags_empty_page) : context.getString(R.string.tags_page_selection_hint, page));
+                status.setText(count == 0 ? "" : context.getString(R.string.tags_page_selection_hint, page));
+                if (count == 0) pageError.showEmpty(context.getString(R.string.tags_empty_page), TagPickerDialog.this::load);
                 next.setEnabled(count >= 30);
             }
             @Override public void onFailure(Call<List<TagGroup>> c, Throwable t) {

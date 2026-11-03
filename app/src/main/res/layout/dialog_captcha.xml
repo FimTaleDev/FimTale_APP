@@ -38,4 +38,7 @@
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
+    <com.fimtale.ui.PageErrorView android:id="@+id/captchaError"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:visibility="gone" />
 </LinearLayout>

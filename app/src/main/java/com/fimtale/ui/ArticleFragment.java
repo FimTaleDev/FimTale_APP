@@ -51,9 +51,8 @@ public class ArticleFragment extends Fragment {
     private FrameLayout contentContainer;
     private ShimmerSkeletonView loadingSkeleton;
     private LoadingCardAdapter loadingFooter;
-    private LinearLayout emptyStateLayout;
-    private Button btnLogin;
-    private TextView tvNoResults;
+    private PageErrorView emptyStateLayout;
+    private PageErrorView tvNoResults;
     private RecyclerView recyclerView;
     private TopicAdapter adapter;
     private List<TopicViewItem> dataList = new ArrayList<>();
@@ -78,7 +77,6 @@ public class ArticleFragment extends Fragment {
         contentContainer = view.findViewById(R.id.content_container);
         loadingSkeleton = view.findViewById(R.id.loadingSkeleton);
         emptyStateLayout = view.findViewById(R.id.emptyStateLayout);
-        btnLogin = view.findViewById(R.id.btnLogin);
         tvNoResults = view.findViewById(R.id.tvNoResults);
 
         tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.common_all)));
@@ -108,9 +106,9 @@ public class ArticleFragment extends Fragment {
     }
 
     private void setupEmptyState() {
-        btnLogin.setOnClickListener(v -> {
-            DialogHelper.openLogin(requireContext());
-        });
+        emptyStateLayout.showLogin(getString(R.string.profile_login_message),
+                () -> DialogHelper.openLogin(requireContext()));
+        emptyStateLayout.setVisibility(View.GONE);
     }
 
     private void loadContent() {
@@ -235,7 +233,7 @@ public class ArticleFragment extends Fragment {
                         adapter.notifyDataSetChanged(); recyclerView.scrollToPosition(0);
                     } else adapter.notifyItemRangeInserted(start, dataList.size() - start);
                     finishLoading();
-                    tvNoResults.setText(getString(R.string.search_no_results));
+                    tvNoResults.showEmpty(getString(R.string.search_no_results), () -> { currentPage = 1; loadTopics(); });
                     tvNoResults.setVisibility(dataList.isEmpty() ? View.VISIBLE : View.GONE);
                 } else loadFailed(requestedPage, com.fimtale.network.ApiErrors.message(response));
             }

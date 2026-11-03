@@ -57,7 +57,7 @@ public class SearchActivity extends AppCompatActivity {
     private View historyPanel;
     private MaterialButton clearHistoryButton;
     private ShimmerSkeletonView loadingSkeleton;
-    private TextView loadingStatus;
+    private com.fimtale.ui.PageErrorView loadingStatus;
     private LoadingCardAdapter loadingFooter;
     private TopicAdapter topicAdapter;
     private SearchHistoryAdapter historyAdapter;
@@ -160,7 +160,6 @@ public class SearchActivity extends AppCompatActivity {
                 })
                 .setNegativeButton(getString(R.string.common_cancel), null)
                 .show());
-        loadingStatus.setOnClickListener(v -> submitSearch());
         swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> isLoading
                 || (recyclerView.getVisibility() == View.VISIBLE && recyclerView.canScrollVertically(-1)));
         swipeRefreshLayout.setOnRefreshListener(() -> {
@@ -221,7 +220,8 @@ public class SearchActivity extends AppCompatActivity {
         List<String> history = UserPreferences.getSearchHistory(this);
         historyAdapter.updateData(history);
         historyPanel.setVisibility(history.isEmpty() ? View.GONE : View.VISIBLE);
-        loadingStatus.setText(getString(R.string.search_empty_hint));
+        loadingStatus.showPrompt(R.string.search_title, getString(R.string.search_empty_hint),
+                "magnify", R.string.search_title, null);
         loadingStatus.setVisibility(history.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
@@ -258,7 +258,7 @@ public class SearchActivity extends AppCompatActivity {
                     finishLoading();
                     recyclerView.scrollToPosition(requestedPage == 1 ? 0 : start);
                     if (topicItems.isEmpty()) {
-                        loadingStatus.setText(getString(R.string.search_no_results));
+                        loadingStatus.showEmpty(getString(R.string.search_no_results), () -> loadTopics(1));
                         loadingStatus.setVisibility(View.VISIBLE);
                     }
                 } else showLoadError(page, ApiErrors.message(response));

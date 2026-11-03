@@ -193,29 +193,8 @@
     </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
-    <LinearLayout
-        android:id="@+id/emptyStateLayout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="gone"
-        tools:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/profile_login_message"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:layout_marginBottom="16dp"/>
-
-        <Button
-            android:id="@+id/btnLogin"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/login_title"/>
-
-    </LinearLayout>
+    <com.fimtale.ui.PageErrorView android:id="@+id/emptyStateLayout"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:visibility="gone" />
 
 </FrameLayout>

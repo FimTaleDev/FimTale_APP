@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.*;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -16,18 +15,14 @@ import com.fimtale.adapter.CommentAdapter;
 import com.fimtale.adapter.TimelineAdapter;
 import com.fimtale.adapter.TopicAdapter;
 import com.fimtale.model.*;
-import com.fimtale.network.ApiErrors;
-import com.fimtale.network.RetrofitClient;
 import com.fimtale.ui.PageErrorView;
+import com.fimtale.ui.BottomSheetMenu;
 import com.fimtale.ui.PullToRefresh;
 import com.fimtale.utils.UserPreferences;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import java.util.*;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 /** Native profile tabs and collection management share loading, paging and session handling. */
 public abstract class CommunityListActivity extends AppCompatActivity {
@@ -37,15 +32,13 @@ public abstract class CommunityListActivity extends AppCompatActivity {
     private RecyclerView list;
     private TabLayout tabs;
     private Spinner spinner;
-    private TextView status;
+    private PageErrorView status;
     private PageErrorView error;
     private int renderedVersion = -1, renderedFolders = -1;
     private CommentAdapter commentAdapter;
     private RecyclerView.Adapter<?> adapter;
-    private final List<AlertDialog> dialogs = new ArrayList<>();
-    private Call<TopicDetailResponse> workCall;
+    private final List<android.app.Dialog> dialogs = new ArrayList<>();
     private android.view.MenuItem feedMenu, scopeMenu;
-    private int loadingWorkId;
     private final com.fimtale.ui.ButtonLoadingIcon foldersLoadingIcon = new com.fimtale.ui.ButtonLoadingIcon();
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved); setContentView(R.layout.activity_community);
@@ -56,18 +49,16 @@ public abstract class CommunityListActivity extends AppCompatActivity {
         toolbar.setTitle(favoritesMode() ? getString(R.string.favorites_title) : followedTagFeedMode()
                 ? getString(R.string.community_followed_tag_works) : getString(R.string.community_user_content, username));
         toolbar.setNavigationOnClickListener(v -> finish());
-        toolbar.getMenu().add(R.string.community_refresh).setOnMenuItemClickListener(item -> { model.refresh(); return true; });
+        if (!favoritesMode()) toolbar.getMenu().add(R.string.community_refresh)
+                .setOnMenuItemClickListener(item -> { model.refresh(); return true; });
         feedMenu = toolbar.getMenu().add(R.string.community_open_tags_feed).setVisible(false);
         feedMenu.setOnMenuItemClickListener(item -> { startActivity(new Intent(this, FollowedTagFeedActivity.class)); return true; });
         scopeMenu = toolbar.getMenu().add(R.string.community_choose_tags).setVisible(followedTagFeedMode());
         scopeMenu.setOnMenuItemClickListener(item -> { chooseTags(); return true; });
         list = findViewById(R.id.communityList); list.setLayoutManager(new LinearLayoutManager(this)); list.setItemAnimator(null);
-        error = PageErrorView.wrap(list); status = findViewById(R.id.communityStatus);
-        status.setOnClickListener(v -> {
-            if ((favoritesMode() || followedTagFeedMode()) && !UserPreferences.isLoggedIn(this)) login();
-            else if (emptyTags()) startActivity(new Intent(this, com.fimtale.TagListActivity.class));
-            else model.refresh();
-        });
+        status = findViewById(R.id.communityStatus);
+        View listSurface = PageErrorView.withEmptyState(list, status);
+        error = PageErrorView.wrap(listSurface);
         spinner = findViewById(R.id.communityFolderSpinner); findViewById(R.id.communityFolderManage).setOnClickListener(v -> manageFolders());
         tabs = findViewById(R.id.communityTabs);
         String[] labels = getResources().getStringArray(favoritesMode() ? R.array.community_favorite_tabs
@@ -88,7 +79,8 @@ public abstract class CommunityListActivity extends AppCompatActivity {
         });
         findViewById(R.id.communityPrevious).setOnClickListener(v -> model.load(model.page - 1));
         findViewById(R.id.communityNext).setOnClickListener(v -> model.load(model.page + 1));
-        PullToRefresh.attach(list, model::refresh, () -> !model.loading && !model.mutating);
+        PullToRefresh.attach(listSurface, model::refresh, () -> !model.loading && !model.mutating,
+                () -> list.canScrollVertically(-1));
         model.changes.observe(this, ignored -> render());
         if ((favoritesMode() || followedTagFeedMode()) && !UserPreferences.isLoggedIn(this) && saved == null) login();
     }
@@ -106,9 +98,6 @@ public abstract class CommunityListActivity extends AppCompatActivity {
                 case WORK:
                     List<TopicViewItem> topics = new ArrayList<>(); for (Topic topic : model.works) topics.add(new TopicViewItem(topic));
                     TopicAdapter works = new TopicAdapter(topics);
-                    if (favoritesMode()) works.setFavoriteManager(id -> {
-                        for (Topic topic : model.works) if (topic.getId() == id) { assignFolders(topic); break; }
-                    }, id -> loadingWorkId == id || model.pending("work:" + id), () -> !model.mutating && loadingWorkId == 0 && !model.foldersLoading);
                     adapter = works; break;
                 case COMMENT:
                     commentAdapter = new CommentAdapter(model.comments, this);
@@ -123,8 +112,13 @@ public abstract class CommunityListActivity extends AppCompatActivity {
             list.setAdapter(adapter); list.scrollToPosition(0);
         } else if (adapter != null && !(adapter instanceof CommentAdapter)) adapter.notifyDataSetChanged();
         boolean guest = (favoritesMode() || followedTagFeedMode()) && !UserPreferences.isLoggedIn(this);
-        status.setText(guest ? followedTagFeedMode() ? R.string.community_scope_login : R.string.community_login_required : R.string.community_empty);
-        if (!guest && emptyTags()) status.setText(R.string.community_empty_tags);
+        if (guest) status.showLogin(getString(followedTagFeedMode()
+                ? R.string.community_scope_login : R.string.community_login_required), this::login);
+        else if (emptyTags()) status.showPrompt(R.string.page_empty_title, getString(R.string.community_empty_tags),
+                "inbox-outline", R.string.tags_list_title,
+                () -> startActivity(new Intent(this, com.fimtale.TagListActivity.class)));
+        else status.showEmpty(getString(R.string.community_empty), model::refresh);
+        status.setActionEnabled(!model.mutating);
         feedMenu.setVisible(favoritesMode() && model.tab == 3 && !guest);
         scopeMenu.setEnabled(followedTagFeedMode() && !model.followed.isEmpty() && !model.loading);
         status.setVisibility(!model.loading && model.error.isEmpty() && model.size() == 0 ? View.VISIBLE : View.GONE);
@@ -169,12 +163,13 @@ public abstract class CommunityListActivity extends AppCompatActivity {
         labels.add(getString(R.string.community_refresh));
         for (WorkInteractions.Folder folder : model.folders) labels.add(getString(R.string.community_folder_count, folder.name, folder.count));
         List<WorkInteractions.Folder> snapshot = new ArrayList<>(model.folders);
-        dialogs.add(new MaterialAlertDialogBuilder(this).setTitle(R.string.community_manage_folders).setItems(labels.toArray(new String[0]), (dialog, which) -> {
+        BottomSheetMenu sheet = new BottomSheetMenu(this, getString(R.string.community_manage_folders), labels.toArray(new String[0]), which -> {
             if (!sameSession(token)) return;
             if (which == 0) FolderNameDialog.show(this, null, "");
             else if (which == 1) model.loadFolders();
             else folderOptions(snapshot.get(which - 2));
-        }).show());
+        });
+        dialogs.add(sheet); sheet.show();
     }
     private void chooseTags() {
         if (model.followed.isEmpty() || model.loading) return;
@@ -196,11 +191,12 @@ public abstract class CommunityListActivity extends AppCompatActivity {
     private void folderOptions(WorkInteractions.Folder folder) {
         String token = model.token();
         String[] options = {getString(R.string.community_rename_folder), getString(R.string.community_delete_folder)};
-        dialogs.add(new MaterialAlertDialogBuilder(this).setTitle(folder.name).setItems(options, (dialog, which) -> {
+        BottomSheetMenu sheet = new BottomSheetMenu(this, folder.name, options, which -> {
             if (!sameSession(token)) return;
             if (which == 0) FolderNameDialog.show(this, folder.id, folder.name);
             else confirm(getString(R.string.community_delete_folder_confirm, folder.name), () -> model.deleteFolder(folder.id));
-        }).show());
+        });
+        dialogs.add(sheet); sheet.show();
     }
     private void removeItem(int position) {
         if (model.mutating) return;
@@ -217,46 +213,13 @@ public abstract class CommunityListActivity extends AppCompatActivity {
         dialogs.add(new MaterialAlertDialogBuilder(this).setMessage(message).setNegativeButton(R.string.common_cancel, null)
                 .setPositiveButton(R.string.common_confirm, (d, which) -> { if (sameSession(token)) action.run(); }).show());
     }
-    private void assignFolders(Topic topic) {
-        if (model.mutating || model.foldersLoading) return;
-        if (workCall != null) workCall.cancel();
-        String token = model.token();
-        loadingWorkId = topic.getId(); if (adapter != null) adapter.notifyDataSetChanged();
-        workCall = RetrofitClient.getInstance().getWorkViewer(token, topic.getId());
-        workCall.enqueue(new Callback<TopicDetailResponse>() {
-            @Override public void onResponse(Call<TopicDetailResponse> request, Response<TopicDetailResponse> response) {
-                if (isFinishing() || isDestroyed() || request.isCanceled() || request != workCall) return;
-                loadingWorkId = 0; if (adapter != null) adapter.notifyDataSetChanged();
-                if (!sameSession(token)) return;
-                if (!response.isSuccessful() || response.body() == null || response.body().viewer == null) {
-                    Toast.makeText(CommunityListActivity.this, ApiErrors.message(response), Toast.LENGTH_LONG).show(); return;
-                }
-                Set<Integer> before = response.body().viewer.folderIds(), selected = new LinkedHashSet<>(before);
-                List<Integer> ids = new ArrayList<>(); ids.add(0);
-                List<String> labels = new ArrayList<>(); labels.add(getString(R.string.work_default_favorites));
-                for (WorkInteractions.Folder folder : model.folders) { ids.add(folder.id); labels.add(folder.name); }
-                boolean[] checked = new boolean[ids.size()]; for (int i = 0; i < checked.length; i++) checked[i] = before.contains(ids.get(i));
-                dialogs.add(new MaterialAlertDialogBuilder(CommunityListActivity.this).setTitle(R.string.community_assign_folders)
-                        .setMultiChoiceItems(labels.toArray(new String[0]), checked, (dialog, which, isChecked) -> { if (isChecked) selected.add(ids.get(which)); else selected.remove(ids.get(which)); })
-                        .setNegativeButton(R.string.common_cancel, null).setPositiveButton(R.string.common_save, (dialog, which) -> {
-                            if (sameSession(token)) model.assignWork(topic.getId(), before, selected);
-                        }).show());
-            }
-            @Override public void onFailure(Call<TopicDetailResponse> request, Throwable failure) {
-                if (!isFinishing() && !isDestroyed() && !request.isCanceled() && request == workCall) {
-                    loadingWorkId = 0; if (adapter != null) adapter.notifyDataSetChanged();
-                    Toast.makeText(CommunityListActivity.this, R.string.community_load_failed, Toast.LENGTH_LONG).show();
-                }
-            }
-        });
-    }
     @Override protected void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out); if (model == null) return;
         out.putInt("tab", model.tab); if (model.folderId != null) out.putInt("folder", model.folderId);
     }
     @Override protected void onDestroy() {
         foldersLoadingIcon.close(); if (list != null) list.setAdapter(null);
-        if (workCall != null) workCall.cancel(); if (commentAdapter != null) commentAdapter.close();
-        for (AlertDialog dialog : dialogs) dialog.dismiss(); super.onDestroy();
+        if (commentAdapter != null) commentAdapter.close();
+        for (android.app.Dialog dialog : dialogs) dialog.dismiss(); super.onDestroy();
     }
 }

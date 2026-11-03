@@ -124,12 +124,21 @@ public abstract class ModuleActivity extends AppCompatActivity {
     }
     protected boolean loginRequired() {
         if (model.signedIn()) return false;
-        text(content, R.string.modules_login); button(content, R.string.login_title, "login", false, false,
-                () -> startActivity(new Intent(this, LoginActivity.class))); return true;
+        com.fimtale.ui.PageErrorView.addTo(content).showLogin(getString(R.string.modules_login),
+                () -> startActivity(new Intent(this, LoginActivity.class)));
+        return true;
     }
     protected void errors() {
-        for (String message : new LinkedHashSet<>(model.errors.values())) text(content, message);
-        if (!model.errors.isEmpty()) button(content, R.string.modules_retry, "refresh", false, false, this::refresh);
+        if (model.errors.isEmpty()) return;
+        com.fimtale.ui.PageErrorView state = com.fimtale.ui.PageErrorView.addTo(content);
+        state.show(android.text.TextUtils.join("\n\n", new LinkedHashSet<>(model.errors.values())), this::refresh);
+        state.setActionEnabled(!model.busy());
+    }
+    protected void empty(int message) {
+        if (!model.errors.isEmpty()) return;
+        com.fimtale.ui.PageErrorView state = com.fimtale.ui.PageErrorView.addTo(content);
+        state.showEmpty(getString(message), this::refresh);
+        state.setActionEnabled(!model.busy() && !model.loading());
     }
     protected void tabLabels(int array, int selected, IntConsumer change) {
         tabs.setVisibility(View.VISIBLE);

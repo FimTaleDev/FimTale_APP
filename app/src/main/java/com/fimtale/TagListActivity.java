@@ -44,7 +44,7 @@ public class TagListActivity extends AppCompatActivity {
     private ObjectAnimator elevationAnimator;
     private ShimmerSkeletonView loadingSkeleton;
     private LoadingCardAdapter loadingFooter;
-    private TextView loadingStatus;
+    private com.fimtale.ui.PageErrorView loadingStatus;
     private Call<List<TagGroup>> tagsCall;
     private String keyword = "";
 
@@ -57,7 +57,6 @@ public class TagListActivity extends AppCompatActivity {
         loadingSkeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.TAGS);
         loadingFooter = new LoadingCardAdapter(ShimmerSkeletonView.Layout.TAG_ROW);
         loadingStatus = findViewById(R.id.loadingStatus);
-        loadingStatus.setOnClickListener(v -> loadTags(1));
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -68,12 +67,14 @@ public class TagListActivity extends AppCompatActivity {
         toolbarContainer = findViewById(R.id.toolbarContainer);
 
         recyclerView = findViewById(R.id.recyclerView);
-        pageError = com.fimtale.ui.PageErrorView.wrap(recyclerView);
+        View listSurface = com.fimtale.ui.PageErrorView.withEmptyState(recyclerView, loadingStatus);
+        pageError = com.fimtale.ui.PageErrorView.wrap(listSurface);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TagAdapter(tagList, this);
         recyclerView.setAdapter(new ConcatAdapter(adapter, loadingFooter));
         recyclerView.setItemAnimator(null);
-        com.fimtale.ui.PullToRefresh.attach(recyclerView, () -> loadTags(1), () -> !isLoading);
+        com.fimtale.ui.PullToRefresh.attach(listSurface, () -> loadTags(1), () -> !isLoading,
+                () -> recyclerView.canScrollVertically(-1));
 
         float targetElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4, getResources().getDisplayMetrics());
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -141,7 +142,7 @@ public class TagListActivity extends AppCompatActivity {
                     finishLoading();
                     if (page == 1) recyclerView.scrollToPosition(0);
                     if (tagList.isEmpty()) {
-                        loadingStatus.setText(getString(R.string.tags_empty_tap));
+                        loadingStatus.showEmpty(getString(R.string.tags_empty_tap), () -> loadTags(1));
                         loadingStatus.setVisibility(View.VISIBLE);
                     }
                 } else showLoadError(page);

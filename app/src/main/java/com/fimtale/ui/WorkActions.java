@@ -34,7 +34,7 @@ public final class WorkActions {
     private final Runnable login;
     private final Consumer<TopicDetailResponse> updated;
     private final MaterialButton like, favorite, highPraise;
-    private final TextView status;
+    private final PageErrorView status;
     private TopicDetailResponse data;
     private String stateToken;
     private boolean busy, known, closed;
@@ -56,7 +56,6 @@ public final class WorkActions {
         like.setOnClickListener(v -> vote());
         favorite.setOnClickListener(v -> chooseFavorites());
         highPraise.setOnClickListener(v -> chooseHighPraise());
-        status.setOnClickListener(v -> { if (!busy) refresh(); });
     }
 
     public void bind(TopicDetailResponse data, String token) {
@@ -114,8 +113,8 @@ public final class WorkActions {
         highPraise.setContentDescription(activity.getString(hpGiven > 0 ? R.string.work_hp_sent_description : R.string.work_hp_description, hpTotal));
         // The active icon shows progress through both the mutation and reconciliation.
         // Expose a retry affordance only when the interaction state could not be loaded.
-        status.setVisibility(!busy && !known ? View.VISIBLE : View.GONE);
-        status.setText(!busy && !known ? activity.getString(R.string.work_interactions_load_failed) : "");
+        if (!busy && !known) status.show(activity.getString(R.string.work_interactions_load_failed), this::refresh);
+        else status.hide();
     }
 
     private void beginAction(MaterialButton button) {

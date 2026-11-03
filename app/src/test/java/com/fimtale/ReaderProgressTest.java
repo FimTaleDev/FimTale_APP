@@ -48,6 +48,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class ReaderProgressTest {
     private static final String CONTENT = "长段落正文。".repeat(500) + "\n\n"
             + ("后续段落文字。".repeat(180) + "\n\n").repeat(6);
+    private String fixtureContent = CONTENT;
     private Context context;
     private Field service;
     private Object originalService;
@@ -67,7 +68,7 @@ public class ReaderProgressTest {
         OkHttpClient client = new OkHttpClient.Builder().addInterceptor(chain -> {
             String data = chain.request().url().encodedPath().endsWith("get_work")
                     ? "{\"work\":{\"id\":42,\"title\":\"第一章\",\"preface\":"
-                            + new Gson().toJson(CONTENT) + "},\"chapters\":[]}"
+                            + new Gson().toJson(fixtureContent) + "},\"chapters\":[]}"
                     : "{\"items\":[],\"total\":0}";
             return new okhttp3.Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
                     .code(200).message("Fixture")
@@ -156,6 +157,30 @@ public class ReaderProgressTest {
         List<?> rows = rows();
         for (int i = 0; i < rows.size(); i++) if ((int) field(rows.get(i), "chapterId") == chapterId) return i;
         throw new AssertionError("Missing fixture chapter " + chapterId);
+    }
+
+    @Test public void emptyChapterShowsSharedStateInBothModesAndKeepsItsCommentsPage() throws Exception {
+        fixtureContent = "  \n";
+        launch(-1);
+        View empty = layout.findViewByPosition(1);
+        assertTrue(empty instanceof com.fimtale.ui.PageErrorView);
+        assertEquals(context.getString(R.string.page_empty_title),
+                ((TextView) empty.findViewById(R.id.pageErrorTitle)).getText().toString());
+        assertEquals(context.getString(R.string.common_no_content),
+                ((TextView) empty.findViewById(R.id.pageErrorMessage)).getText().toString());
+
+        ((TabLayout) activity.findViewById(R.id.tabPageMode)).getTabAt(0).select();
+        settle();
+        ViewPager2 pager = activity.findViewById(R.id.viewPager);
+        assertEquals(2, pager.getAdapter().getItemCount());
+        RecyclerView pagerList = (RecyclerView) pager.getChildAt(0);
+        View page = pagerList.findViewHolderForAdapterPosition(0).itemView;
+        assertTrue(page instanceof com.fimtale.ui.PageErrorView);
+        assertEquals(context.getString(R.string.page_empty_title),
+                ((TextView) page.findViewById(R.id.pageErrorTitle)).getText().toString());
+        pager.setCurrentItem(1, false);
+        settle();
+        assertNotNull(pagerList.findViewHolderForAdapterPosition(1).itemView.findViewById(R.id.readerCommentsRoot));
     }
 
     @Test public void longParagraphProgressMovesContinuouslyAndMatchesTheBar() throws Exception {

@@ -15,8 +15,9 @@
         android:layout_height="wrap_content" android:nestedScrollingEnabled="false"/>
     <com.fimtale.ui.ShimmerSkeletonView android:id="@+id/commentsSkeleton"
         android:layout_width="match_parent" android:layout_height="420dp"/>
-    <TextView android:id="@+id/commentsStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:gravity="center" android:padding="24dp" android:visibility="gone" android:textColor="?attr/colorOnSurfaceVariant"/>
+    <com.fimtale.ui.PageErrorView android:id="@+id/commentsStatus"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:visibility="gone" />
     <LinearLayout android:id="@+id/commentsPager" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center_vertical" android:orientation="horizontal" android:visibility="gone">
         <com.google.android.material.button.MaterialButton android:id="@+id/commentsPrevious" style="@style/Widget.Material3.Button.TextButton"

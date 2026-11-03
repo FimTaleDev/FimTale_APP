@@ -31,7 +31,8 @@ public final class WorkCommentsSection {
     private final RecyclerView list;
     private final CommentAdapter adapter;
     private final ShimmerSkeletonView skeleton;
-    private final TextView status, pageLabel, title, sort;
+    private final PageErrorView status;
+    private final TextView pageLabel, title, sort;
     private final View previous, next;
     private final Rect visibleBounds = new Rect();
     private PageErrorView pageError;
@@ -169,8 +170,7 @@ public final class WorkCommentsSection {
                         });
                     }
                     if (result.getItems().isEmpty()) {
-                        status.setText(activity.getString(R.string.comments_empty_tap)); status.setVisibility(View.VISIBLE);
-                        status.setOnClickListener(v -> load(1));
+                        status.showEmpty(activity.getString(R.string.comments_empty_tap), () -> load(1)); status.setVisibility(View.VISIBLE);
                     }
                 } else showError(requestedPage, ApiErrors.message(response));
             }

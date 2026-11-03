@@ -58,13 +58,15 @@
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp"
                 android:text="@string/filters_presets" android:textAppearance="?attr/textAppearanceTitleLarge" />
             <LinearLayout android:id="@+id/filterPresets" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
-            <TextView android:id="@+id/filterPresetEmpty" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingVertical="12dp"
-                android:text="@string/filters_no_presets" android:textColor="?attr/colorOnSurfaceVariant" />
+            <com.fimtale.ui.PageErrorView android:id="@+id/filterPresetEmpty"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:visibility="gone" />
 
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp"
                 android:text="@string/filters_blocked_users" android:textAppearance="?attr/textAppearanceTitleLarge" />
-            <TextView android:id="@+id/filterBlockedEmpty" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingVertical="12dp"
-                android:text="@string/filters_no_blocked_users" android:textColor="?attr/colorOnSurfaceVariant" />
+            <com.fimtale.ui.PageErrorView android:id="@+id/filterBlockedEmpty"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:visibility="gone" />
             <LinearLayout android:id="@+id/filterBlocked" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
         </LinearLayout>
     </ScrollView>

@@ -340,11 +340,24 @@ public class HistoryActivityTest {
         failingEntry = "42-102"; failRefresh = true;
         AlertDialog dialog = confirmSelected(); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); awaitDeletion(dialog);
         assertEquals(1, adapter.getItemCount()); assertEquals(1, adapter.getSelectedCount());
-        View retry = activity.findViewById(R.id.pageErrorRetry); assertTrue(retry.isShown());
+        View retry = shownError(activity.findViewById(android.R.id.content)).findViewById(R.id.pageErrorRetry); assertTrue(retry.isShown());
         failRefresh = false; retry.performClick();
         await(() -> pages.size() == 3 && ready());
         assertEquals(1, adapter.getSelectedCount());
         assertEquals("42-102", adapter.getSelectedTopics().get(0).getKey());
         assertTrue(action(R.id.action_history_delete).isEnabled());
+    }
+    private com.fimtale.ui.PageErrorView shownError(View view) {
+        if (view.getVisibility() != View.VISIBLE) return null;
+        if (view instanceof com.fimtale.ui.PageErrorView) return ((TextView) view.findViewById(R.id.pageErrorTitle))
+                .getText().equals(activity.getText(R.string.page_error_title)) ? (com.fimtale.ui.PageErrorView) view : null;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                com.fimtale.ui.PageErrorView found = shownError(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 }

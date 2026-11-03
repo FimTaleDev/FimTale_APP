@@ -112,13 +112,8 @@
                     android:layout_height="match_parent"
                     android:visibility="gone" />
 
-                <TextView
-                    android:id="@+id/loadingStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:padding="24dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
+                <com.fimtale.ui.PageErrorView android:id="@+id/loadingStatus"
+                    android:layout_width="match_parent" android:layout_height="match_parent"
                     android:visibility="gone" />
             </FrameLayout>
         </com.fimtale.ui.PullRefreshLayout>

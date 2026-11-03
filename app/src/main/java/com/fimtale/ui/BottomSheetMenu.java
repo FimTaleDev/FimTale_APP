@@ -22,6 +22,7 @@ public final class BottomSheetMenu extends BottomSheetDialog {
     private final LinearLayout items;
     private final MenuItem.OnMenuItemClickListener listener;
     private final PopupMenu definition;
+    private CharSequence heading;
 
     public BottomSheetMenu(Context context, @MenuRes int resource, MenuItem.OnMenuItemClickListener listener) {
         this(context, listener);
@@ -31,6 +32,13 @@ public final class BottomSheetMenu extends BottomSheetDialog {
     public BottomSheetMenu(Context context, CharSequence[] titles, IntConsumer selected) {
         this(context, item -> { selected.accept(item.getItemId() - Menu.FIRST); return true; });
         for (int i = 0; i < titles.length; i++) menu.add(Menu.NONE, Menu.FIRST + i, i, titles[i]);
+    }
+
+    public BottomSheetMenu(Context context, CharSequence title, CharSequence[] titles, IntConsumer selected) {
+        this(context, titles, selected);
+        heading = title;
+        setTitle(title);
+        ViewCompat.setAccessibilityPaneTitle(items, title);
     }
 
     private BottomSheetMenu(Context context, MenuItem.OnMenuItemClickListener listener) {
@@ -52,6 +60,15 @@ public final class BottomSheetMenu extends BottomSheetDialog {
     /** Hosts call this when permissions or loading state change while the menu is open. */
     public void refresh() {
         items.removeAllViews();
+        if (heading != null) {
+            TextView title = new TextView(getContext());
+            title.setText(heading);
+            title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge);
+            int space = Math.round(12 * getContext().getResources().getDisplayMetrics().density);
+            title.setPadding(space, space, space, space);
+            ViewCompat.setAccessibilityHeading(title, true);
+            items.addView(title);
+        }
         for (int i = 0; i < menu.size(); i++) {
             MenuItem item = menu.getItem(i);
             if (!item.isVisible()) continue;

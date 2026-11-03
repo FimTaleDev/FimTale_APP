@@ -227,7 +227,7 @@ public abstract class ReportsActivity extends AppCompatActivity {
                     if (model.loaded && !model.loading && model.error.isEmpty()) rows.add("unavailable");
                 } else {
                     rows.addAll(model.reports);
-                    if (!model.loading && model.loaded && model.reports.isEmpty()) rows.add("empty");
+                    if (!model.loading && model.error.isEmpty() && model.loaded && model.reports.isEmpty()) rows.add("empty");
                     if (model.page > 1 || model.hasNext()) rows.add("pagination");
                 }
                 if (model.loading) rows.add("loading");
@@ -244,6 +244,8 @@ public abstract class ReportsActivity extends AppCompatActivity {
         }
         @Override public void onBindViewHolder(@NonNull Holder holder, int position) {
             LinearLayout row = holder.body; row.removeAllViews(); Object item = rows.get(position);
+            boolean pageState = "login".equals(item) || "error".equals(item) || "empty".equals(item) || "unavailable".equals(item);
+            row.setPadding(pageState ? 0 : dp(16), pageState ? 0 : dp(12), pageState ? 0 : dp(16), pageState ? 0 : dp(12));
             if ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                     == Configuration.UI_MODE_NIGHT_YES) {
                 ((MaterialCardView) holder.itemView).setCardBackgroundColor(MaterialColors.getColor(row,
@@ -265,11 +267,11 @@ public abstract class ReportsActivity extends AppCompatActivity {
                 if (message.user_id > 0) author.setOnClickListener(v -> startActivity(new Intent(ReportsActivity.this,SiteActivity.class).putExtra(SiteActivity.EXTRA_PATH,"/user/"+message.user_id)));
                 BbCodeRendering.setText(renderer,text(row,"",15,false),message.content == null ? "" : message.content);
             } else switch ((String)item) {
-                case "login": text(row,getString(R.string.report_login_message),17,true); button(row,getString(R.string.login_title),() -> DialogHelper.openLogin(ReportsActivity.this)); break;
+                case "login": com.fimtale.ui.PageErrorView.addTo(row).showLogin(getString(R.string.report_login_message), () -> DialogHelper.openLogin(ReportsActivity.this)); break;
                 case "loading": ShimmerSkeletonView skeleton = new ShimmerSkeletonView(ReportsActivity.this); skeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.DRAFTS); row.addView(skeleton,new LinearLayout.LayoutParams(-1,dp(model.loaded?160:400))); break;
-                case "error": text(row,model.error,14,false); button(row,getString(R.string.common_retry),model::retry); break;
-                case "unavailable": text(row,getString(R.string.report_empty),18,true); text(row,getString(R.string.report_unavailable),14,false); break;
-                case "empty": text(row,getString(R.string.report_empty),18,true); text(row,getString(R.string.report_empty_filtered),14,false); break;
+                case "error": com.fimtale.ui.PageErrorView.addTo(row).show(model.error, model::retry); break;
+                case "unavailable": com.fimtale.ui.PageErrorView.addTo(row).showEmpty(getString(R.string.report_unavailable), model::refresh); break;
+                case "empty": com.fimtale.ui.PageErrorView.addTo(row).showEmpty(getString(R.string.report_empty_filtered), model::refresh); break;
                 case "pagination":
                     text(row,getString(R.string.common_page_number, model.page),14,false);
                     LinearLayout navigation = new LinearLayout(ReportsActivity.this); row.addView(navigation);
@@ -277,7 +279,7 @@ public abstract class ReportsActivity extends AppCompatActivity {
                     if (model.hasNext()) button(navigation,getString(R.string.common_next_page),() -> model.goToPage(model.page+1));
                     break;
                 case "detail": detail(row,model.selected); break;
-                case "messages": text(row,getString(R.string.report_message_history),16,true); if (model.selected.messages().isEmpty()) text(row,getString(R.string.inbox_no_messages),14,false); break;
+                case "messages": text(row,getString(R.string.report_message_history),16,true); if (model.selected.messages().isEmpty()) com.fimtale.ui.PageErrorView.addTo(row).showEmpty(getString(R.string.inbox_no_messages)); break;
                 case "closed": text(row,getString(R.string.report_closed_message, model.selected.statusLabel()),14,false); break;
                 case "debug": debug(row,model.selected); break;
             }

@@ -47,7 +47,8 @@ public final class ReaderCommentsPanel {
     private final RecyclerView list;
     private final CommentAdapter adapter;
     private final ShimmerSkeletonView skeleton;
-    private final TextView title, status, pageLabel;
+    private final TextView title, pageLabel;
+    private final PageErrorView status;
     private final PullRefreshLayout refresh;
     private final MaterialButton sort, previous, next, send, emoji;
     private final TextInputEditText input;
@@ -200,7 +201,7 @@ public final class ReaderCommentsPanel {
                     title.setText(activity.getString(R.string.comments_count, result.total));
                     finishLoading();
                     if (result.getItems().isEmpty()) {
-                        status.setText(activity.getString(R.string.comments_empty_pull));
+                        status.showEmpty(activity.getString(R.string.comments_empty_pull), () -> load(1));
                         status.setVisibility(View.VISIBLE);
                     }
                 } else showError(requestedPage, ApiErrors.message(response));

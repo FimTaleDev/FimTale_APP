@@ -11,9 +11,9 @@
     <string name="comments_send_failed">评论发送失败，请重试</string>
     <string name="comments_deleted">该评论已删除</string>
     <string name="comments_newest_first">从晚到早</string>
-    <string name="comments_empty_pull">暂无评论，下拉刷新</string>
+    <string name="comments_empty_pull">暂无评论</string>
     <string name="comments_load_failed">评论加载失败</string>
-    <string name="comments_empty_tap">暂无评论，点击刷新</string>
+    <string name="comments_empty_tap">暂无评论</string>
     <string name="comments_pinned_author">置顶 · %1$s</string>
     <string name="comments_reply_to">" · 回复 #%1$d"</string>
     <string name="comments_context">#%1$d · 评于：%2$s%3$s</string>

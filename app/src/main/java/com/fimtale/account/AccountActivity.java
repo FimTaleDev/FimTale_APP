@@ -136,7 +136,7 @@ public class AccountActivity extends ModuleActivity {
             if (pending.has(Integer.toString(id))) check.setChecked(bool(pending,Integer.toString(id)));
             visible.put(id, check.isChecked()); check.setOnCheckedChangeListener((v, checked) -> { visible.put(id,checked); state.editBadge(id,checked); }); content.addView(check);
         }
-        if (normal.isEmpty()) text(content, R.string.modules_empty);
+        if (normal.isEmpty()) empty(R.string.modules_empty);
         button(content, R.string.account_save_badges, Route.BADGE_VISIBILITY.name(), false, true, () -> {
             JsonArray hidden = new JsonArray(); for (JsonElement id : off) if (!visible.containsKey(id.getAsInt())) hidden.add(id);
             visible.forEach((id, shown) -> { if (!shown) hidden.add(id); }); state.saveBadges(hidden,true);

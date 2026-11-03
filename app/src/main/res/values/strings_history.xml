@@ -2,7 +2,7 @@
 <resources>
     <string name="history_title">历史记录</string>
     <string name="history_short_title">历史</string>
-    <string name="history_empty">暂无历史记录，点击刷新</string>
+    <string name="history_empty">暂无历史记录</string>
     <string name="history_batch_select">批量选择</string>
     <string name="history_exit_batch_select">退出批量选择</string>
     <string name="history_select_all">全选当前列表</string>

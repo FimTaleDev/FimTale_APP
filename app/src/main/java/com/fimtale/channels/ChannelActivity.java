@@ -166,7 +166,7 @@ public class ChannelActivity extends ModuleActivity {
         if(state.canAdd())button(content,R.string.channel_add_work,"add_work",false,true,()->form("add_work",R.string.channel_add_work,ModuleFormDialog.field("work_id",R.string.channel_work_id,"")));
         JsonObject active=state.activeBallot();if(num(active,"id")>0){text(content,getString(R.string.channel_ballot_info,num(obj(active,"config"),"min_votes_per_user"),num(obj(active,"config"),"max_votes_per_user"),num(obj(active,"config"),"bits_cost")));button(content,R.string.channel_ballot_results,"ballot",false,false,()->state.openBallot(num(active,"id")));}
         if(state.rows().size()==0&&state.loading("page")&&!state.errors.containsKey("page")){loadingBlocks(3);return;}
-        if(state.rows().size()==0&&!state.loading("page"))text(content,R.string.modules_empty);
+        if(state.rows().size()==0&&!state.loading("page"))empty(R.string.modules_empty);
         Gson gson=new Gson();
         for(JsonElement value:state.rows()){
             JsonObject work=obj(value);int id=num(work,"id");if(id<=0)continue;
@@ -236,8 +236,7 @@ public class ChannelActivity extends ModuleActivity {
             content.addView(skeleton,new LinearLayout.LayoutParams(-1,dp(420)));return;
         }
         if(state.rows().size()==0&&!state.loading("page")&&!state.errors.containsKey("page")){
-            TextView empty=text(content,R.string.comments_empty_pull);
-            empty.setGravity(Gravity.CENTER);empty.setPadding(dp(24),dp(24),dp(24),dp(24));
+            empty(R.string.comments_empty_pull);
         }
         for(JsonElement value:state.rows())commentRow(obj(value));
         pager(state.page,state.pages(),state::load);
@@ -348,7 +347,7 @@ public class ChannelActivity extends ModuleActivity {
         if(!state.deleted()){labels.add(getString(R.string.community_report_comment));actions.add(()->ReportDialog.show(this,ReportRequest.CHANNEL_COMMENT,id,str(comment,"content")));}
         menu(labels.toArray(new String[0]),i->actions.get(i).run());
     }
-    private void subscribers(){if(state.rows().size()==0&&!state.loading("page"))text(content,R.string.modules_empty);for(JsonElement value:state.rows())user(content,obj(value));pager(state.page,state.pages(),state::load);}
+    private void subscribers(){if(state.rows().size()==0&&!state.loading("page"))empty(R.string.modules_empty);for(JsonElement value:state.rows())user(content,obj(value));pager(state.page,state.pages(),state::load);}
     private void manage(){
         if(!state.manager()){text(content,R.string.channel_no_management);return;}
         if(state.deleted()){text(content,R.string.channel_deleted);recovery();return;}
@@ -385,7 +384,7 @@ public class ChannelActivity extends ModuleActivity {
             if(num(active,"id")>0)button(content,R.string.channel_ballot_stop,"ballot_toggle",false,true,()->confirm(getString(R.string.channel_ballot_stop_confirm),()->state.mutate("ballot_toggle",Route.TOGGLE_BALLOT,object("channel_id",state.id,"folder_id",num(f,"id"),"ballot_id",num(active,"id")))));
             else button(content,R.string.channel_ballot_start,"ballot_toggle",false,true,()->form("ballot:"+num(f,"id"),R.string.channel_ballot_start,
                     ModuleFormDialog.field("bits_cost",R.string.channel_ballot_cost,"0",InputType.TYPE_CLASS_NUMBER),ModuleFormDialog.field("min_votes_per_user",R.string.channel_ballot_min,"0",InputType.TYPE_CLASS_NUMBER),ModuleFormDialog.field("max_votes_per_user",R.string.channel_ballot_max,"1",InputType.TYPE_CLASS_NUMBER)));}
-        if(state.ballots.size()==0&&!state.loading("page"))text(content,R.string.modules_empty);
+        if(state.ballots.size()==0&&!state.loading("page"))empty(R.string.modules_empty);
         for(JsonElement value:state.ballots){JsonObject ballot=obj(value);int id=num(ballot,"id");button(content,getString(R.string.channel_ballot_title,id,str(ballot,"created_at")),"ballot",false,false,()->state.openBallot(id));}
     }
     private void ballotDetails(){

@@ -37,7 +37,8 @@ import retrofit2.Response;
 
 /** Native account/session management backed by the current user API. */
 public class AccountSessionsActivity extends AppCompatActivity {
-    private TextView summary, empty;
+    private TextView summary;
+    private com.fimtale.ui.PageErrorView empty;
     private LinearLayout sessions;
     private CircularProgressIndicator progress;
     private TextInputState tokenView;
@@ -119,7 +120,8 @@ public class AccountSessionsActivity extends AppCompatActivity {
     private void renderSessions(List<UserSession> values) {
         sessions.removeAllViews();
         List<UserSession> list = values == null ? Collections.emptyList() : values;
-        empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+        if (list.isEmpty()) empty.showEmpty(getString(R.string.sessions_empty), this::loadSessions);
+        else empty.hide();
         String currentToken = UserPreferences.getToken(this);
         for (UserSession session : list) {
             if (session == null || TextUtils.isEmpty(session.tokenPrefix)) continue;

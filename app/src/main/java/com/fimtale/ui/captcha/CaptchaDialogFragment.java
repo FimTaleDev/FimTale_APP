@@ -50,6 +50,7 @@ public class CaptchaDialogFragment extends DialogFragment {
     private WebView web;
     private View statusPanel, progress;
     private TextView status;
+    private com.fimtale.ui.PageErrorView error;
     private String provider, attempt;
     private boolean settled, polling, escapeOffered, loaded, interactive;
     private String escapeReason;
@@ -87,6 +88,7 @@ public class CaptchaDialogFragment extends DialogFragment {
         statusPanel = content.findViewById(R.id.captchaStatusPanel);
         progress = content.findViewById(R.id.captchaProgress);
         status = content.findViewById(R.id.captchaStatus);
+        error = content.findViewById(R.id.captchaError);
         web = content.findViewById(R.id.captchaWeb);
         web.setBackgroundColor(Color.TRANSPARENT);
         web.getSettings().setJavaScriptEnabled(true);
@@ -166,15 +168,18 @@ public class CaptchaDialogFragment extends DialogFragment {
 
     private void renderState() {
         if (statusPanel == null) return;
-        statusPanel.setVisibility(escapeOffered || !loaded ? View.VISIBLE : View.GONE);
+        statusPanel.setVisibility(!escapeOffered && !loaded ? View.VISIBLE : View.GONE);
         progress.setVisibility(!escapeOffered && !loaded ? View.VISIBLE : View.GONE);
         int message = !escapeOffered ? R.string.captcha_loading
                 : "unsupported_browser".equals(escapeReason) ? R.string.captcha_unsupported
                 : "host_load_failed".equals(escapeReason) ? R.string.captcha_load_error : R.string.captcha_slow;
         if (!getText(message).equals(status.getText())) status.setText(message);
+        if (escapeOffered) error.showPrompt(R.string.page_error_title, getText(message), "cloud-off-outline",
+                keys.size() > 1 ? R.string.captcha_switch : R.string.captcha_retry, this::switchProvider);
+        else error.hide();
         if (getDialog() instanceof AlertDialog) {
             Button switchButton = ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE);
-            if (switchButton != null) switchButton.setVisibility(escapeOffered ? View.VISIBLE : View.GONE);
+            if (switchButton != null) switchButton.setVisibility(View.GONE);
         }
         resizeWidget();
     }
@@ -219,7 +224,7 @@ public class CaptchaDialogFragment extends DialogFragment {
             ((ViewGroup) web.getParent()).removeView(web);
             web.stopLoading(); web.destroy(); web = null;
         }
-        statusPanel = null; progress = null; status = null;
+        statusPanel = null; progress = null; status = null; error = null;
         super.onDestroyView();
     }
 }

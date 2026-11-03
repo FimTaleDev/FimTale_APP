@@ -215,10 +215,9 @@
                         android:text="@string/work_hp_action" android:contentDescription="@string/work_hp_title" android:checkable="true"
                         app:mdiIcon="star-outline"/>
                 </LinearLayout>
-                <TextView android:id="@+id/workActionStatus"
+                <com.fimtale.ui.PageErrorView android:id="@+id/workActionStatus"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:paddingVertical="8dp" android:gravity="center" android:visibility="gone"
-                    android:textColor="?attr/colorOnSurfaceVariant"/>
+                    android:visibility="gone"/>
 
                 <com.google.android.material.divider.MaterialDivider
                     android:id="@+id/authorDivider"

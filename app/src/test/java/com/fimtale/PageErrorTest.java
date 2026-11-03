@@ -104,7 +104,10 @@ public class PageErrorTest {
     }
     private PageErrorView shownError(View view) {
         if (view.getVisibility() != View.VISIBLE) return null;
-        if (view instanceof PageErrorView) return (PageErrorView) view;
+        if (view instanceof PageErrorView) {
+            TextView title = view.findViewById(R.id.pageErrorTitle);
+            return title.getText().equals(context.getText(R.string.page_error_title)) ? (PageErrorView) view : null;
+        }
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
             PageErrorView error = shownError(((ViewGroup) view).getChildAt(i));
             if (error != null) return error;
@@ -144,6 +147,48 @@ public class PageErrorTest {
         assertEquals(View.GONE, error.getVisibility());
         error.hide(); error.show("离线", retries::incrementAndGet, true);
         assertEquals(View.VISIBLE, error.getVisibility());
+    }
+    @Test public void emptyAndLoginStatesReplaceErrorActionsAndRestoreContentAccessibility() {
+        Context themed = new ContextThemeWrapper(context, R.style.Theme_Fimtale);
+        FrameLayout host = new FrameLayout(themed);
+        TextView content = new TextView(themed);
+        content.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        host.addView(content);
+        PageErrorView state = PageErrorView.wrap(content);
+        AtomicInteger retries = new AtomicInteger(), refreshes = new AtomicInteger(), logins = new AtomicInteger();
+        state.show("离线", retries::incrementAndGet, true);
+        assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS, content.getImportantForAccessibility());
+        state.showEmpty(context.getString(R.string.history_empty), refreshes::incrementAndGet);
+        assertEquals(context.getString(R.string.page_empty_title), ((TextView) state.findViewById(R.id.pageErrorTitle)).getText().toString());
+        assertEquals(View.GONE, state.findViewById(R.id.pageErrorContinue).getVisibility());
+        state.findViewById(R.id.pageErrorRetry).performClick();
+        state.findViewById(R.id.pageErrorRetry).performClick();
+        assertEquals(0, retries.get()); assertEquals(1, refreshes.get());
+        assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_YES, content.getImportantForAccessibility());
+        state.showLogin(context.getString(R.string.profile_login_message), logins::incrementAndGet);
+        assertEquals(context.getString(R.string.common_login), ((TextView) state.findViewById(R.id.pageErrorRetry)).getText().toString());
+        state.findViewById(R.id.pageErrorRetry).performClick();
+        assertEquals(1, logins.get());
+        state.showEmpty(context.getString(R.string.work_empty));
+        assertEquals(View.GONE, state.findViewById(R.id.pageErrorRetry).getVisibility());
+        state.findViewById(R.id.pageErrorRetry).performClick();
+        assertEquals(View.VISIBLE, state.getVisibility());
+    }
+    @Test public void emptyListStaysInsidePullRefreshWhileErrorOverlayStaysOutside() {
+        Context themed = new ContextThemeWrapper(context, R.style.Theme_Fimtale);
+        FrameLayout host = new FrameLayout(themed);
+        TextView list = new TextView(themed);
+        PageErrorView empty = new PageErrorView(themed);
+        host.addView(list); host.addView(empty);
+        View surface = PageErrorView.withEmptyState(list, empty);
+        PageErrorView error = PageErrorView.wrap(surface);
+        com.fimtale.ui.PullToRefresh.attach(surface, () -> {}, () -> true);
+        assertSame(list.getParent(), empty.getParent());
+        assertTrue(surface.getParent() instanceof PullRefreshLayout);
+        assertSame(((View) surface.getParent()).getParent(), error.getParent());
+        empty.showEmpty(context.getString(R.string.history_empty));
+        assertEquals(View.VISIBLE, empty.getVisibility());
+        assertEquals(View.GONE, error.getVisibility());
     }
     @Test public void homeErrorRetainsNavigationAndRetryCanBecomeSuccessfulEmptyContent() throws Exception {
         MainActivity activity = launch(MainActivity.class, new Intent(context, MainActivity.class));

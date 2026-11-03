@@ -809,8 +809,8 @@ public class TopicDetailActivity extends AppCompatActivity {
         content.findViewById(R.id.workListSort).setVisibility(View.GONE);
         content.findViewById(R.id.workListPager).setVisibility(View.GONE);
         content.findViewById(R.id.workListSkeleton).setVisibility(View.GONE);
-        TextView empty = content.findViewById(R.id.workListStatus);
-        empty.setText(getString(R.string.reader_no_chapters)); empty.setVisibility(chapters.isEmpty() ? View.VISIBLE : View.GONE);
+        com.fimtale.ui.PageErrorView empty = content.findViewById(R.id.workListStatus);
+        empty.showEmpty(getString(R.string.reader_no_chapters)); empty.setVisibility(chapters.isEmpty() ? View.VISIBLE : View.GONE);
         RecyclerView list = content.findViewById(R.id.workList);
         list.setLayoutManager(new LinearLayoutManager(this)); list.setItemAnimator(null);
         list.setAdapter(new ChapterAdapter(chapters, item -> {

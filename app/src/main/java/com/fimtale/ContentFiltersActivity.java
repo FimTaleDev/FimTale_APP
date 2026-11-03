@@ -55,7 +55,8 @@ public class ContentFiltersActivity extends AppCompatActivity {
     private String[] ratingLabels;
     private static final int[] RATING_VALUES = {0, 1, 2};
     private CircularProgressIndicator progress;
-    private TextView currentLabel, expressionSummary, presetEmpty, blockedEmpty;
+    private TextView currentLabel, expressionSummary;
+    private com.fimtale.ui.PageErrorView presetEmpty, blockedEmpty;
     private Spinner rating;
     private RadioGroup operator;
     private MaterialSwitch invert;
@@ -311,7 +312,9 @@ public class ContentFiltersActivity extends AppCompatActivity {
     }
 
     private void renderPresets() {
-        presets.removeAllViews(); presetEmpty.setVisibility(filterPresets.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
+        presets.removeAllViews();
+        if (filterPresets.isEmpty()) presetEmpty.showEmpty(getString(R.string.filters_no_presets));
+        else presetEmpty.hide();
         for (NamedContentFilter preset : filterPresets) {
             LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0, dp(6), 0, dp(6));
             TextView name = new TextView(this); name.setText(getString(R.string.filters_preset_summary, preset.name == null ? getString(R.string.common_unnamed) : preset.name, summary(preset)));
@@ -329,7 +332,9 @@ public class ContentFiltersActivity extends AppCompatActivity {
     private void deletePreset(NamedContentFilter preset) { List<NamedContentFilter> next = new ArrayList<>(filterPresets); next.remove(preset); saveFilter(activeFilter, next, getString(R.string.filters_preset_deleted)); }
     private void renderBlocked() {
         blockButtons.clear(); blockLoading.stop();
-        blocked.removeAllViews(); blockedEmpty.setVisibility(blockedUsers.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
+        blocked.removeAllViews();
+        if (blockedUsers.isEmpty()) blockedEmpty.showEmpty(getString(R.string.filters_no_blocked_users));
+        else blockedEmpty.hide();
         for (BlockedUser item : blockedUsers) {
             LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
             TextView name = new TextView(this); name.setText(getString(R.string.profile_handle, item.username)); row.addView(name, new LinearLayout.LayoutParams(0, -2, 1));

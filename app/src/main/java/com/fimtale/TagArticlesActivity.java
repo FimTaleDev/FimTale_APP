@@ -48,7 +48,7 @@ public class TagArticlesActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private ShimmerSkeletonView loadingSkeleton;
     private LoadingCardAdapter loadingFooter;
-    private TextView loadingStatus;
+    private com.fimtale.ui.PageErrorView loadingStatus;
     private Call<TopicListResponse> topicsCall;
     private TopicAdapter topicAdapter;
     private List<TopicViewItem> topicViewItemList = new ArrayList<>();
@@ -109,21 +109,21 @@ public class TagArticlesActivity extends AppCompatActivity {
         toolbarContainer = findViewById(R.id.toolbarContainer);
 
         recyclerView = findViewById(R.id.recyclerView);
-        pageError = com.fimtale.ui.PageErrorView.wrap(recyclerView);
+        loadingStatus = findViewById(R.id.loadingStatus);
+        View listSurface = com.fimtale.ui.PageErrorView.withEmptyState(recyclerView, loadingStatus);
+        pageError = com.fimtale.ui.PageErrorView.wrap(listSurface);
         loadingSkeleton = findViewById(R.id.loadingSkeleton);
         loadingSkeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.ARTICLES);
         loadingFooter = new LoadingCardAdapter();
-        loadingStatus = findViewById(R.id.loadingStatus);
-        loadingStatus.setOnClickListener(v -> fetchTagTopics(1));
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         topicAdapter = new TopicAdapter(topicViewItemList);
         recyclerView.setAdapter(new ConcatAdapter(topicAdapter, loadingFooter));
         recyclerView.setItemAnimator(null);
-        com.fimtale.ui.PullToRefresh.attach(recyclerView, () -> {
+        com.fimtale.ui.PullToRefresh.attach(listSurface, () -> {
             tagInfo = null;
             fetchTagTopics(1);
-        }, () -> !isLoading);
+        }, () -> !isLoading, () -> recyclerView.canScrollVertically(-1));
 
         float targetElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4, getResources().getDisplayMetrics());
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -277,7 +277,7 @@ public class TagArticlesActivity extends AppCompatActivity {
                     finishLoading();
                     if (page == 1) recyclerView.scrollToPosition(0);
                     if (topicViewItemList.isEmpty()) {
-                        loadingStatus.setText(getString(R.string.work_empty_tap));
+                        loadingStatus.showEmpty(getString(R.string.work_empty_tap), () -> fetchTagTopics(1));
                         loadingStatus.setVisibility(View.VISIBLE);
                     }
                 } else showLoadError(page);

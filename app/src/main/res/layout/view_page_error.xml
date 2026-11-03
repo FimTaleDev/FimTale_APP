@@ -6,12 +6,13 @@
     android:clickable="true" android:focusable="true">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:gravity="center" android:padding="24dp" android:minHeight="240dp">
-        <com.fimtale.ui.icons.MdiImageView android:layout_width="48dp" android:layout_height="48dp"
+        <com.fimtale.ui.icons.MdiImageView android:id="@+id/pageErrorIcon" android:layout_width="48dp" android:layout_height="48dp"
             android:alpha="0.5" android:contentDescription="@null" app:mdiIcon="cloud-off-outline"
             app:tint="?attr/colorOnSurfaceVariant" />
         <TextView android:id="@+id/pageErrorTitle" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="20dp" android:gravity="center"
-            android:text="@string/page_error_title" android:textAppearance="?attr/textAppearanceTitleLarge" />
+            android:text="@string/page_error_title" android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:textColor="?attr/colorOnSurface" android:accessibilityHeading="true" />
         <TextView android:id="@+id/pageErrorMessage" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center"
             android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"

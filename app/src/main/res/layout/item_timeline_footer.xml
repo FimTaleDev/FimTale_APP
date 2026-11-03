@@ -2,6 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="wrap_content"
     android:orientation="vertical" android:gravity="center" android:paddingVertical="24dp">
+    <com.fimtale.ui.PageErrorView android:id="@+id/timelineEmptyState"
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" />
     <TextView android:id="@+id/timelineFooterText" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:gravity="center"
         android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant" />

@@ -35,7 +35,7 @@
     <string name="work_sort_views">阅读数排序</string>
     <string name="work_sort_rating">总体评分</string>
     <string name="work_choose_sort">选择排序方式</string>
-    <string name="work_empty_tap">暂无文章，点击刷新</string>
+    <string name="work_empty_tap">暂无文章</string>
     <string name="work_share_preview">分享图预览</string>
     <string name="work_share_saved">分享图已保存至相册</string>
     <string name="work_detail_title">文章详情</string>
@@ -43,7 +43,7 @@
     <string name="work_view">查看作品</string>
     <string name="work_chapter_label">章节</string>
     <string name="work_other_tags">其他标签</string>
-    <string name="work_interactions_load_failed">互动状态加载失败，点击重试</string>
+    <string name="work_interactions_load_failed">互动状态加载失败</string>
     <string name="work_like_uncertain">未收到点赞结果，正在核对状态</string>
     <string name="work_favorites_failed">收藏夹加载失败，请重试</string>
     <string name="work_hp_message">确定要给这篇作品的作者投送 HighPraise 吗？每个 HP 会从你的账户扣除 50 比特，作者获得 100 比特。HP 一经投送无法撤回。</string>

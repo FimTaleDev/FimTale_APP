@@ -109,8 +109,8 @@ public class CaptchaDialogDeviceTest {
             scenario.onActivity(activity -> {
                 AlertDialog dialog = (AlertDialog) ((CaptchaDialogFragment) activity.getSupportFragmentManager()
                         .findFragmentByTag(CaptchaDialogFragment.TAG)).requireDialog();
-                assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE) instanceof com.google.android.material.button.MaterialButton);
-                assertEquals(activity.getString(R.string.captcha_unsupported), ((TextView) dialog.findViewById(R.id.captchaStatus)).getText().toString());
+                assertTrue(dialog.findViewById(R.id.pageErrorRetry) instanceof com.google.android.material.button.MaterialButton);
+                assertEquals(activity.getString(R.string.captcha_unsupported), ((TextView) dialog.findViewById(R.id.captchaError).findViewById(R.id.pageErrorMessage)).getText().toString());
                 assertEquals(View.GONE, dialog.findViewById(R.id.captchaProgress).getVisibility());
             });
             capture("captcha-dialog-night");
@@ -122,7 +122,7 @@ public class CaptchaDialogDeviceTest {
         scenario.onActivity(activity -> {
             AlertDialog dialog = (AlertDialog) ((CaptchaDialogFragment) activity.getSupportFragmentManager()
                     .findFragmentByTag(CaptchaDialogFragment.TAG)).requireDialog();
-            Button button = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            Button button = dialog.findViewById(R.id.pageErrorRetry);
             assertTrue(button instanceof com.google.android.material.button.MaterialButton);
             assertTrue(button.isShown());
             pageReady.set(false);
@@ -136,7 +136,7 @@ public class CaptchaDialogDeviceTest {
         while (SystemClock.uptimeMillis() < deadline) {
             AtomicReference<Boolean> visible = new AtomicReference<>(false);
             instrumentation.runOnMainSync(() -> {
-                View button = web.get().getRootView().findViewById(android.R.id.button1);
+                View button = web.get().getRootView().findViewById(R.id.pageErrorRetry);
                 visible.set(button != null && button.isShown());
             });
             if (visible.get()) return;

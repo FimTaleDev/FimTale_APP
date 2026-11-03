@@ -50,8 +50,7 @@ public class ProfileFragment extends Fragment {
     private boolean isLoggedIn = false;
 
     private View contentLayout;
-    private View emptyStateLayout;
-    private View btnLogin;
+    private PageErrorView emptyStateLayout;
 
     @Nullable
     @Override
@@ -65,7 +64,6 @@ public class ProfileFragment extends Fragment {
 
         contentLayout = view.findViewById(R.id.contentLayout);
         emptyStateLayout = view.findViewById(R.id.emptyStateLayout);
-        btnLogin = view.findViewById(R.id.btnLogin);
 
         layoutUserHeader = view.findViewById(R.id.layoutUserHeader);
         ivAvatar = view.findViewById(R.id.ivAvatar);
@@ -111,11 +109,9 @@ public class ProfileFragment extends Fragment {
     }
 
     private void setupEmptyState() {
-        if (btnLogin != null) {
-            btnLogin.setOnClickListener(v -> {
-                DialogHelper.openLogin(requireContext());
-            });
-        }
+        emptyStateLayout.showLogin(getString(R.string.profile_login_message),
+                () -> DialogHelper.openLogin(requireContext()));
+        emptyStateLayout.setVisibility(View.GONE);
     }
 
     private void loadContent() {
@@ -130,7 +126,8 @@ public class ProfileFragment extends Fragment {
             btnReviewQueue.setVisibility(View.VISIBLE);
         } else {
             isLoggedIn = false;
-            emptyStateLayout.setVisibility(View.VISIBLE);
+            emptyStateLayout.showLogin(getString(R.string.profile_login_message),
+                    () -> DialogHelper.openLogin(requireContext()));
             contentLayout.setVisibility(View.GONE);
         }
     }

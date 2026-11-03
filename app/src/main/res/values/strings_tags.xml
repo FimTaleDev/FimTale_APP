@@ -5,7 +5,7 @@
     <string name="tags_label">标签</string>
     <string name="tags_search">搜索标签</string>
     <string name="tags_details_failed">暂时无法加载标签信息。</string>
-    <string name="tags_empty_tap">暂无标签，点击刷新</string>
+    <string name="tags_empty_tap">暂无标签</string>
     <string name="tags_name">标签名称</string>
     <string name="tags_group_genre" translatable="false">题材</string>
     <string name="tags_group_warning" translatable="false">读者注意</string>

@@ -28,9 +28,9 @@
                 app:trackThickness="4dp" />
             <LinearLayout android:id="@+id/accountSessions" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" />
-            <TextView android:id="@+id/accountEmpty" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:gravity="center" android:padding="24dp" android:text="@string/sessions_empty"
-                android:textColor="?attr/colorOnSurfaceVariant" android:visibility="gone" />
+            <com.fimtale.ui.PageErrorView android:id="@+id/accountEmpty"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:visibility="gone" />
 
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp"
                 android:text="@string/sessions_api_token" android:textAppearance="?attr/textAppearanceTitleLarge" />

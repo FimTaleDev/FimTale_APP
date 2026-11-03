@@ -70,7 +70,8 @@ public class UserDetailActivity extends AppCompatActivity {
     private AlertDialog medalPreviewDialog;
     private ShimmerSkeletonView loadingSkeleton, topicsSkeleton;
     private boolean profileLoading;
-    private TextView loadError, topicsStatus;
+    private TextView loadError;
+    private com.fimtale.ui.PageErrorView topicsStatus;
     private com.fimtale.ui.PageErrorView pageError;
     private Call<UserDetailResponse> profileCall;
     private Call<com.fimtale.model.UserWorksResponse> topicsCall;
@@ -459,8 +460,7 @@ public class UserDetailActivity extends AppCompatActivity {
                     finishTopicsLoading();
                     rvUserTopics.setVisibility(topicList.isEmpty() ? View.GONE : View.VISIBLE);
                     if (topicList.isEmpty()) {
-                        topicsStatus.setText(getString(R.string.work_empty)); topicsStatus.setVisibility(View.VISIBLE);
-                        topicsStatus.setOnClickListener(null);
+                        topicsStatus.showEmpty(getString(R.string.work_empty)); topicsStatus.setVisibility(View.VISIBLE);
                     }
                 } else showTopicsLoadError(page);
             }

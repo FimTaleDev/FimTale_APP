@@ -43,7 +43,7 @@ public class ArticleListFragment extends Fragment {
     private ShimmerSkeletonView loadingSkeleton;
     private LoadingCardAdapter loadingFooter;
     private Call<TopicListResponse> topicsCall;
-    private TextView errorTextView;
+    private PageErrorView errorTextView;
 
     public static ArticleListFragment newInstance(String category) {
         ArticleListFragment fragment = new ArticleListFragment();
@@ -78,7 +78,6 @@ public class ArticleListFragment extends Fragment {
         }
         loadingSkeleton = view.findViewById(R.id.loadingSkeleton);
         errorTextView = view.findViewById(R.id.errorTextView);
-        errorTextView.setOnClickListener(v -> { currentPage = 1; loadTopics(); });
 
         pageError = com.fimtale.ui.PageErrorView.wrap(recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -141,7 +140,7 @@ public class ArticleListFragment extends Fragment {
                     else topicAdapter.notifyItemRangeInserted(start, topicViewItemList.size() - start);
                     finishLoading();
                     if (topicViewItemList.isEmpty()) {
-                        errorTextView.setText(getString(R.string.work_empty_tap)); errorTextView.setVisibility(View.VISIBLE);
+                        errorTextView.showEmpty(getString(R.string.work_empty_tap), () -> { currentPage = 1; loadTopics(); }); errorTextView.setVisibility(View.VISIBLE);
                     }
                 } else showError(requestedPage);
             }

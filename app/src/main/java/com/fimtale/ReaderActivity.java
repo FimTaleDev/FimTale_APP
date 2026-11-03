@@ -282,6 +282,7 @@ public class ReaderActivity extends AppCompatActivity {
         static final int TYPE_IMAGE = 5;
         static final int TYPE_TITLE = 6;
         static final int TYPE_SCROLL_TEXT = 7;
+        static final int TYPE_EMPTY = 8;
         
         int type;
         CharSequence content;
@@ -870,8 +871,8 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private LoadedChapter createLoadedChapter(int id, String title, String content) {
-        String source = content == null || content.isEmpty() ? getString(R.string.common_no_content) : content;
-        Spanned rendered = BbCodeText.normalizeTables(markwon.toMarkdown(com.fimtale.utils.BbCode.toMarkdown(source)));
+        if (content == null || content.trim().isEmpty()) return new LoadedChapter(id, title, null);
+        Spanned rendered = BbCodeText.normalizeTables(markwon.toMarkdown(com.fimtale.utils.BbCode.toMarkdown(content)));
         return new LoadedChapter(id, title, parseSegments(rendered));
     }
 
@@ -1359,6 +1360,10 @@ public class ReaderActivity extends AppCompatActivity {
             paragraphStartOffsets.add(currentOffset);
             currentOffset += chapter.title.length() + paragraphSpacing.length();
 
+            if (chapter.segments.isEmpty()) {
+                verticalPages.add(new ReaderPage(ReaderPage.TYPE_EMPTY, null, chapter.id));
+                paragraphStartOffsets.add(currentOffset++);
+            }
             for (ContentSegment segment : chapter.segments) {
                 if (segment.type == ReaderPage.TYPE_TEXT) {
                     for (CharSequence paragraph : BbCodeText.verticalChunks(segment.content)) {
@@ -1624,6 +1629,13 @@ public class ReaderActivity extends AppCompatActivity {
 
         for (LoadedChapter chapter : loadedChapters) {
             chapterStartPageIndices.add(pages.size());
+            if (chapter.segments.isEmpty()) {
+                pages.add(new ReaderPage(ReaderPage.TYPE_EMPTY, null, chapter.id));
+                pageStartOffsets.add(globalOffset++);
+                pages.add(new ReaderPage(ReaderPage.TYPE_COMMENT, null, chapter.id));
+                pageStartOffsets.add(globalOffset);
+                continue;
+            }
             int segmentStart = 0;
             SpannableStringBuilder firstBlock = new SpannableStringBuilder(chapter.title == null ? "" : chapter.title)
                     .append("\n\n");
@@ -1791,7 +1803,9 @@ public class ReaderActivity extends AppCompatActivity {
         }
         findViewById(R.id.btnLocateChapter).setEnabled(hasCurrentChapter);
         rvChapterList.setVisibility(filteredChapterList.isEmpty() ? View.GONE : View.VISIBLE);
-        findViewById(R.id.readerCatalogEmpty).setVisibility(filteredChapterList.isEmpty() ? View.VISIBLE : View.GONE);
+        com.fimtale.ui.PageErrorView catalogEmpty = findViewById(R.id.readerCatalogEmpty);
+        if (filteredChapterList.isEmpty()) catalogEmpty.showEmpty(getString(R.string.reader_no_chapters));
+        else catalogEmpty.hide();
         if (chapterListAdapter != null && chapterListAdapter.highlightedChapterId != currentTopicId) {
             chapterListAdapter.highlightedChapterId = currentTopicId;
             chapterListAdapter.notifyDataSetChanged();
@@ -2000,6 +2014,11 @@ public class ReaderActivity extends AppCompatActivity {
                 container.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                         isVerticalMode ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT));
                 return new CommentViewHolder(container);
+            } else if (viewType == ReaderPage.TYPE_EMPTY) {
+                com.fimtale.ui.PageErrorView state = new com.fimtale.ui.PageErrorView(parent.getContext());
+                state.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        isVerticalMode ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT));
+                return new RecyclerView.ViewHolder(state) {};
             } else if (viewType == ReaderPage.TYPE_IMAGE) {
                 View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_reader_image, parent, false);
                 
@@ -2070,6 +2089,15 @@ public class ReaderActivity extends AppCompatActivity {
             if (holder instanceof CommentViewHolder) {
                 CommentViewHolder commentHolder = (CommentViewHolder) holder;
                 commentHolder.bind(page.chapterId);
+            } else if (holder.itemView instanceof com.fimtale.ui.PageErrorView) {
+                com.fimtale.ui.PageErrorView state = (com.fimtale.ui.PageErrorView) holder.itemView;
+                state.showEmpty(getString(R.string.common_no_content));
+                state.getChildAt(0).setBackgroundColor(readerBackgroundColor);
+                ((TextView) state.findViewById(R.id.pageErrorTitle)).setTextColor(readerTextColor);
+                int secondary = ColorUtils.blendARGB(readerBackgroundColor, readerTextColor, 0.75f);
+                ((TextView) state.findViewById(R.id.pageErrorMessage)).setTextColor(secondary);
+                ((ImageView) state.findViewById(R.id.pageErrorIcon)).setImageTintList(ColorStateList.valueOf(secondary));
+                state.getChildAt(0).setOnTouchListener(touchListener);
             } else if (holder instanceof TextViewHolder) {
                 TextViewHolder textHolder = (TextViewHolder) holder;
                 boolean isChapterTitle = page.type == ReaderPage.TYPE_TITLE;

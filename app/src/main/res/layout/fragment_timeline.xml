@@ -14,14 +14,7 @@
     <com.fimtale.ui.ShimmerSkeletonView android:id="@+id/timelineSkeleton"
         android:layout_width="match_parent" android:layout_height="match_parent"
         android:layout_marginTop="@dimen/page_margin" android:visibility="gone" />
-    <LinearLayout android:id="@+id/timelineState" android:orientation="vertical"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_gravity="center" android:gravity="center" android:padding="32dp" android:visibility="gone">
-        <TextView android:id="@+id/timelineStateTitle" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:gravity="center"
-            android:textAppearance="?attr/textAppearanceTitleMedium" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/timelineStateAction"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:text="@string/common_login" />
-    </LinearLayout>
+    <com.fimtale.ui.PageErrorView android:id="@+id/timelineState"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:visibility="gone" />
 </FrameLayout>
