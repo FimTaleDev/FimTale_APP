@@ -543,7 +543,7 @@ public class UserDetailActivity extends AppCompatActivity {
         blockItem.setVisible(currentUserId > 0 && !self);
         blockItem.setEnabled(social != null && !social.blocking);
         blockItem.setTitle(social != null && social.blocked ? R.string.filters_unblock : R.string.community_block_user);
-        blockItem.setIcon(MdiIcons.drawable(this, social != null && social.blocked ? "account-cancel" : "account-cancel-outline"));
+        blockItem.setIcon(null);
         if (moreAction != null) moreAction.bind("dots-vertical", false, social != null && social.blockChanging, true);
         if (moreMenu.isShowing()) moreMenu.refresh();
     }

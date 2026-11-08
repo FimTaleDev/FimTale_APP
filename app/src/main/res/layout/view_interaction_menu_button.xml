@@ -5,4 +5,6 @@
     android:layout_width="48dp" android:layout_height="48dp"
     android:minWidth="48dp" android:minHeight="48dp"
     android:insetTop="0dp" android:insetBottom="0dp" android:padding="12dp"
+    android:textColor="@color/app_bar_action_icon"
+    app:iconTint="@color/app_bar_action_icon"
     app:iconPadding="0dp" />

@@ -32,3 +32,6 @@ google-services.json
 
 # Visual Studio Code
 .vscode/
+
+# WorkBuddy
+.workbuddy/
