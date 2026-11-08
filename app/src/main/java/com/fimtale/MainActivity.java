@@ -185,10 +185,6 @@ public class MainActivity extends AppCompatActivity {
         if (startupScreen == null) checkForUpdates();
     }
 
-    public void onHomeContentReady() {
-        if (startupScreen != null) startupScreen.onContentReady();
-    }
-
     private void checkForUpdates() {
         com.fimtale.crash.CrashFeedback.whenNoPendingReport(this, () -> UpdateChecker.checkUpdate(this, false));
     }

@@ -19,9 +19,10 @@ import com.airbnb.lottie.LottieAnimationView;
 import com.fimtale.R;
 import com.google.android.material.color.MaterialColors;
 
-/** A local, bounded launch animation while the first home request runs underneath. */
+/** A local, bounded launch animation that hands off shortly after the logo finishes playing. */
 public final class StartupScreen implements DefaultLifecycleObserver {
-    private static final long MAX_WAIT_MS = 4500;
+    private static final long MAX_WAIT_MS = 3000;
+    private static final long POST_ANIMATION_DELAY_MS = 500;
     private static final long TRANSITION_DURATION_MS = 320;
     private final AppCompatActivity activity;
     private final ViewGroup host;
@@ -33,10 +34,14 @@ public final class StartupScreen implements DefaultLifecycleObserver {
     private final boolean lightStatusBar, lightNavigationBar;
     private final Runnable timeout = () -> {
         animationFinished = true;
-        contentReady = true;
+        handoffReady = true;
         finishIfReady();
     };
-    private boolean animationFinished, contentReady, closing, fadedOut, destroyed;
+    private final Runnable finishAfterAnimation = () -> {
+        handoffReady = true;
+        finishIfReady();
+    };
+    private boolean animationFinished, handoffReady, closing, fadedOut, destroyed;
 
     public StartupScreen(AppCompatActivity activity, Runnable onFinished) {
         this.activity = activity;
@@ -69,12 +74,13 @@ public final class StartupScreen implements DefaultLifecycleObserver {
             if (destroyed || closing) return;
             animation.setImageResource(R.drawable.startup_logo);
             animationFinished = true;
+            handoffReady = true;
             finishIfReady();
         });
         animation.addAnimatorListener(new AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(Animator animator) {
                 animationFinished = true;
-                finishIfReady();
+                overlay.postDelayed(finishAfterAnimation, POST_ANIMATION_DELAY_MS);
             }
         });
         activity.getLifecycle().addObserver(this);
@@ -84,19 +90,16 @@ public final class StartupScreen implements DefaultLifecycleObserver {
         } else {
             animation.setImageResource(R.drawable.startup_logo);
             animationFinished = true;
+            handoffReady = true;
         }
     }
 
-    public void onContentReady() {
-        contentReady = true;
-        finishIfReady();
-    }
-
     private void finishIfReady() {
-        if (destroyed || closing || !animationFinished || !contentReady
+        if (destroyed || closing || !handoffReady
                 || !activity.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) return;
         closing = true;
         overlay.removeCallbacks(timeout);
+        overlay.removeCallbacks(finishAfterAnimation);
         animation.removeAllAnimatorListeners();
         animation.cancelAnimation();
         long duration = ValueAnimator.areAnimatorsEnabled() ? TRANSITION_DURATION_MS : 0;
@@ -135,6 +138,7 @@ public final class StartupScreen implements DefaultLifecycleObserver {
 
     private void release() {
         overlay.removeCallbacks(timeout);
+        overlay.removeCallbacks(finishAfterAnimation);
         overlay.animate().cancel();
         content.animate().cancel();
         content.setAlpha(contentAlpha);
