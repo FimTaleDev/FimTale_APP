@@ -45,6 +45,14 @@ public final class MdiIcons {
         applyMenu(context, menu, menuRes);
     }
 
+    /** A fresh icon in a caller-chosen colour, for pages that do not follow the app theme. */
+    @NonNull
+    public static IconicsDrawable drawable(@NonNull Context context, @NonNull String name, @ColorInt int color) {
+        IconicsDrawable drawable = drawable(context, name);
+        drawable.setColorList(ColorStateList.valueOf(color));
+        return drawable;
+    }
+
     /** A centered cover placeholder whose glyph is not enlarged by ImageView's centerCrop. */
     @NonNull
     public static Drawable coverPlaceholder(@NonNull Context context) {

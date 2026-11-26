@@ -1653,8 +1653,10 @@ public class ReaderActivity extends AppCompatActivity {
                 titleBlock.setSpan(new RelativeSizeSpan(1.25f), 0, titleLength,
                         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
-            addPagedText(titleBlock, chapter.id, ReaderPage.TYPE_TEXT, titleLength,
-                    contentWidth, contentHeight, lineSpacingMultiplier, globalOffset);
+            if (TextUtils.isGraphic(titleBlock)) {
+                addPagedText(titleBlock, chapter.id, ReaderPage.TYPE_TEXT, titleLength,
+                        contentWidth, contentHeight, lineSpacingMultiplier, globalOffset);
+            }
             globalOffset += titleBlock.length();
 
             for (int i = segmentStart; i < chapter.segments.size();) {
@@ -1675,8 +1677,11 @@ public class ReaderActivity extends AppCompatActivity {
                     next++;
                 }
                 CharSequence formattedContent = textBlock;
-                addPagedText(formattedContent, chapter.id, ReaderPage.TYPE_TEXT, 0,
-                        contentWidth, contentHeight, lineSpacingMultiplier, globalOffset);
+                // Whitespace between two images is not a page of its own.
+                if (TextUtils.isGraphic(formattedContent)) {
+                    addPagedText(formattedContent, chapter.id, ReaderPage.TYPE_TEXT, 0,
+                            contentWidth, contentHeight, lineSpacingMultiplier, globalOffset);
+                }
                 globalOffset += formattedContent.length();
                 i = next;
             }
@@ -2011,6 +2016,7 @@ public class ReaderActivity extends AppCompatActivity {
                 return new LoadingViewHolder(view);
             } else if (viewType == ReaderPage.TYPE_COMMENT) {
                 FrameLayout container = new FrameLayout(parent.getContext());
+                container.setBackgroundColor(readerBackgroundColor);
                 container.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                         isVerticalMode ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT));
                 return new CommentViewHolder(container);
@@ -2128,13 +2134,29 @@ public class ReaderActivity extends AppCompatActivity {
                 ImageViewHolder imageHolder = (ImageViewHolder) holder;
                 
                 int cornerRadius = (int) (12 * holder.itemView.getContext().getResources().getDisplayMetrics().density);
-                
+                int placeholderTint = ColorUtils.blendARGB(readerBackgroundColor, readerTextColor, 0.6f);
+                imageHolder.placeholder.setImageDrawable(MdiIcons.drawable(ReaderActivity.this, "image-outline", placeholderTint));
+                imageHolder.placeholder.setVisibility(View.VISIBLE);
+                imageHolder.imageView.setImageDrawable(null);
                 try {
                     Glide.with(imageHolder.imageView.getContext())
                             .load(page.content.toString())
                             .apply(RequestOptions.bitmapTransform(new RoundedCorners(cornerRadius)))
-                            .placeholder(MdiIcons.drawable(ReaderActivity.this, "image-outline"))
-                            .error(MdiIcons.drawable(ReaderActivity.this, "image-broken-variant"))
+                            .listener(new com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable>() {
+                                @Override public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException error,
+                                        Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target,
+                                        boolean isFirstResource) {
+                                    imageHolder.placeholder.setImageDrawable(MdiIcons.drawable(ReaderActivity.this, "image-broken-variant", placeholderTint));
+                                    imageHolder.placeholder.setVisibility(View.VISIBLE);
+                                    return false;
+                                }
+                                @Override public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model,
+                                        com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target,
+                                        com.bumptech.glide.load.DataSource dataSource, boolean isFirstResource) {
+                                    imageHolder.placeholder.setVisibility(View.GONE);
+                                    return false;
+                                }
+                            })
                             .into(imageHolder.imageView);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -2246,10 +2268,12 @@ public class ReaderActivity extends AppCompatActivity {
 
         class ImageViewHolder extends RecyclerView.ViewHolder {
             ImageView imageView;
+            ImageView placeholder;
 
             ImageViewHolder(View itemView) {
                 super(itemView);
                 imageView = itemView.findViewById(R.id.ivReaderImage);
+                placeholder = itemView.findViewById(R.id.ivReaderImagePlaceholder);
             }
         }
 
@@ -2332,6 +2356,7 @@ public class ReaderActivity extends AppCompatActivity {
                         commentsPanel = new ReaderCommentsPanel(ReaderActivity.this, itemView, rootTopicId);
                         commentsPanel.setWorkAuthor(workData == null || workData.getAuthorInfo() == null ? 0 : workData.getAuthorInfo().getId());
                     }
+                    commentsPanel.setPalette(readerBackgroundColor, textColor);
                     commentsPanel.bind(chapterId);
                 }
 

@@ -37,7 +37,7 @@ public final class ShimmerSkeletonView extends View {
     private final List<Float> blockDelays = new ArrayList<>();
     private final Matrix shaderMatrix = new Matrix();
     private final PathInterpolator sweep = new PathInterpolator(.25f, 0f, 0f, 1f);
-    private final int baseColor, highlightColor, cardColor;
+    private int baseColor, highlightColor, cardColor;
     private LinearGradient shimmer;
     private ValueAnimator animator;
     private float phase;
@@ -64,6 +64,14 @@ public final class ShimmerSkeletonView extends View {
     private float dp(float value) { return value * getResources().getDisplayMetrics().density; }
     public void setSkeletonLayout(Layout layout) {
         this.layout = layout; rebuild(); requestLayout(); invalidate();
+    }
+    /** Reader pages tint the placeholder to their own palette instead of the app theme's. */
+    public void setPalette(int background, int foreground) {
+        baseColor = ColorUtils.blendARGB(background, foreground, .09f);
+        highlightColor = ColorUtils.blendARGB(baseColor, foreground, .12f);
+        cardColor = ColorUtils.blendARGB(background, foreground, .04f);
+        setBackgroundColor(background);
+        rebuild(); invalidate();
     }
     @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int height = layout == Layout.CARD ? 392 : layout == Layout.HISTORY_ROW ? 120 : layout == Layout.TAG_ROW ? 128 : 800;

@@ -126,6 +126,11 @@ public final class PageErrorView extends FrameLayout {
         }
         setVisibility(VISIBLE);
     }
+    /** Reader pages tint the state surface to their palette instead of the app theme's background. */
+    public void setSurfaceColor(int color) {
+        View surface = getChildAt(0);
+        if (surface != null) surface.setBackgroundColor(color);
+    }
     public void hide() {
         if (getVisibility() == VISIBLE && content != null) content.setImportantForAccessibility(previousAccessibility);
         retry = null; dismissedMessage = null; setVisibility(GONE);

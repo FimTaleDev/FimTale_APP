@@ -172,6 +172,13 @@ public final class ReaderCommentsPanel {
         load(1);
     }
 
+    /** Reader pages pass their palette so the placeholder and states match the page, not the app theme. */
+    public void setPalette(int background, int foreground) {
+        skeleton.setPalette(background, foreground);
+        status.setSurfaceColor(background);
+        pageError.setSurfaceColor(background);
+    }
+
     private boolean valid(Call<?> call) {
         return !closed && !activity.isFinishing() && !activity.isDestroyed()
                 && !call.isCanceled() && call == activeCall;
