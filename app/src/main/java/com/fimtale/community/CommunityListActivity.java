@@ -36,6 +36,10 @@ public abstract class CommunityListActivity extends AppCompatActivity {
     private PageErrorView status;
     private ShimmerSkeletonView skeleton;
     private ShimmerSkeletonView.Layout shownLayout;
+    private boolean loginPending;
+    private final androidx.activity.result.ActivityResultLauncher<Intent> loginLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+                    result -> { loginPending = false; if (model != null) model.resume(); render(); });
     private PageErrorView error;
     private int renderedVersion = -1, renderedFolders = -1;
     private CommentAdapter commentAdapter;
@@ -89,7 +93,7 @@ public abstract class CommunityListActivity extends AppCompatActivity {
         if ((favoritesMode() || followedTagFeedMode()) && !UserPreferences.isLoggedIn(this) && saved == null) login();
     }
     @Override protected void onResume() { super.onResume(); if (model != null) model.resume(); }
-    private void login() { startActivity(new Intent(this, LoginActivity.class)); }
+    private void login() { loginPending = true; loginLauncher.launch(new Intent(this, LoginActivity.class)); }
     private boolean emptyTags() {
         return followedTagFeedMode() && model.followed.isEmpty() || favoritesMode() && model.tab == 3 && model.tags.isEmpty();
     }
@@ -126,19 +130,24 @@ public abstract class CommunityListActivity extends AppCompatActivity {
             list.setAdapter(adapter); list.scrollToPosition(0);
         } else if (adapter != null && !(adapter instanceof CommentAdapter)) adapter.notifyDataSetChanged();
         boolean guest = (favoritesMode() || followedTagFeedMode()) && !UserPreferences.isLoggedIn(this);
-        if (guest) status.showLogin(getString(followedTagFeedMode()
-                ? R.string.community_scope_login : R.string.community_login_required), this::login);
-        else if (emptyTags()) status.showPrompt(R.string.page_empty_title, getString(R.string.community_empty_tags),
-                "inbox-outline", R.string.tags_list_title,
-                () -> startActivity(new Intent(this, com.fimtale.TagListActivity.class)));
-        else status.showEmpty(getString(R.string.community_empty), model::refresh);
-        status.setActionEnabled(!model.mutating);
+        // A page that is already opening login has no state worth painting: a placeholder under
+        // the incoming login screen reads as a flash.
+        boolean loginCover = guest && loginPending;
+        if (!loginCover) {
+            if (guest) status.showLogin(getString(followedTagFeedMode()
+                    ? R.string.community_scope_login : R.string.community_login_required), this::login);
+            else if (emptyTags()) status.showPrompt(R.string.page_empty_title, getString(R.string.community_empty_tags),
+                    "inbox-outline", R.string.tags_list_title,
+                    () -> startActivity(new Intent(this, com.fimtale.TagListActivity.class)));
+            else status.showEmpty(getString(R.string.community_empty), model::refresh);
+            status.setActionEnabled(!model.mutating);
+        }
         feedMenu.setVisible(favoritesMode() && model.tab == 3 && !guest);
         scopeMenu.setEnabled(followedTagFeedMode() && !model.followed.isEmpty() && !model.loading);
-        status.setVisibility(!model.loading && model.error.isEmpty() && model.size() == 0 ? View.VISIBLE : View.GONE);
+        status.setVisibility(!loginCover && !model.loading && model.error.isEmpty() && model.size() == 0 ? View.VISIBLE : View.GONE);
         ShimmerSkeletonView.Layout wanted = skeletonLayout(model.kind());
         if (wanted != shownLayout) { shownLayout = wanted; skeleton.setSkeletonLayout(wanted); }
-        skeleton.setVisibility(model.loading && model.size() == 0 ? View.VISIBLE : View.GONE);
+        skeleton.setVisibility(loginCover || model.loading && model.size() == 0 ? View.VISIBLE : View.GONE);
         if (!model.loading) PullToRefresh.finish(list);
         if (model.error.isEmpty()) error.hide(); else error.show(model.error, () -> model.load(model.failedPage), model.size() > 0);
         findViewById(R.id.communityPager).setVisibility(model.totalPages > 1 ? View.VISIBLE : View.GONE);
