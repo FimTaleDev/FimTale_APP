@@ -13,19 +13,30 @@ import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.View;
-import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.PathInterpolator;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 import com.fimtale.R;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
-/** Cover and text placeholders with one diagonal highlight clipped to their shapes. */
+/** Cover and text placeholders, each swept by its own block-wide light band. */
 public final class ShimmerSkeletonView extends View {
     public enum Layout { HOME, ARTICLES, CARD, TOPIC_DETAIL, USER_DETAIL, HISTORY, HISTORY_ROW, TAGS, TAG_ROW, DRAFTS, COMMENTS, CONVERSATIONS, CHAT }
+    private static final float SWEEP_SECONDS = 1.6f, ROW_DELAY_SECONDS = .01f;
     private Layout layout = Layout.ARTICLES;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path blocks = new Path();
     private final Path cards = new Path();
+    private final Path clip = new Path();
+    private final List<RectF> blockBounds = new ArrayList<>();
+    private final List<Float> blockRadii = new ArrayList<>();
+    private final List<Float> blockDelays = new ArrayList<>();
     private final Matrix shaderMatrix = new Matrix();
+    private final PathInterpolator sweep = new PathInterpolator(.25f, 0f, 0f, 1f);
     private final int baseColor, highlightColor, cardColor;
     private LinearGradient shimmer;
     private ValueAnimator animator;
@@ -61,7 +72,12 @@ public final class ShimmerSkeletonView extends View {
     }
     @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) { rebuild(); }
     private void block(float left, float top, float right, float bottom, float radius) {
-        if (right > left) blocks.addRoundRect(new RectF(left, top, right, bottom), radius, radius, Path.Direction.CW);
+        if (right > left) {
+            RectF bounds = new RectF(left, top, right, bottom);
+            blocks.addRoundRect(bounds, radius, radius, Path.Direction.CW);
+            blockBounds.add(bounds);
+            blockRadii.add(radius);
+        }
     }
     private void card(float top, float margin) {
         float left = margin, right = getWidth() - margin;
@@ -160,7 +176,7 @@ public final class ShimmerSkeletonView extends View {
         }
     }
     private void rebuild() {
-        blocks.reset(); cards.reset();
+        blocks.reset(); cards.reset(); blockBounds.clear(); blockRadii.clear(); blockDelays.clear();
         if (getWidth() <= 0 || getHeight() <= 0) return;
         if (layout == Layout.CONVERSATIONS) conversations();
         else if (layout == Layout.CHAT) chat();
@@ -178,18 +194,19 @@ public final class ShimmerSkeletonView extends View {
         }
         else if (layout == Layout.HISTORY || layout == Layout.HISTORY_ROW || layout == Layout.TAGS || layout == Layout.TAG_ROW || layout == Layout.DRAFTS) textRows();
         else feed();
-        float band = Math.max(dp(100), getWidth() * .32f);
-        // A diagonal gradient creates a tilted light band as it moves horizontally.
-        // Several eased stops keep the highlight's edges gradual instead of producing
-        // a visible slope break at the center of the band.
-        int soft = ColorUtils.blendARGB(baseColor, highlightColor, .12f);
-        int medium = ColorUtils.blendARGB(baseColor, highlightColor, .42f);
-        int bright = ColorUtils.blendARGB(baseColor, highlightColor, .76f);
-        shimmer = new LinearGradient(-band, band * .55f, band, -band * .55f,
-                new int[]{baseColor, soft, medium, bright, highlightColor, highlightColor,
-                        bright, medium, soft, baseColor},
-                new float[]{0f, .14f, .28f, .4f, .48f, .52f, .6f, .72f, .86f, 1f},
-                Shader.TileMode.CLAMP);
+        assignDelays();
+        // One block-wide band per placeholder, rising to a single peak and falling back to the
+        // block colour, so the sweep crosses as light rather than as a moving panel.
+        shimmer = new LinearGradient(0, 0, 1, 0,
+                new int[]{baseColor, highlightColor, baseColor},
+                new float[]{0f, .5f, 1f}, Shader.TileMode.CLAMP);
+    }
+    /** Rows light up top to bottom, each one a delay behind the row above it. */
+    private void assignDelays() {
+        Set<Float> rows = new TreeSet<>();
+        for (RectF bounds : blockBounds) rows.add(bounds.top);
+        List<Float> ordered = new ArrayList<>(rows);
+        for (RectF bounds : blockBounds) blockDelays.add(ordered.indexOf(bounds.top) * ROW_DELAY_SECONDS);
     }
     private void feed() {
         float y = dp(8);
@@ -214,16 +231,27 @@ public final class ShimmerSkeletonView extends View {
         paint.setShader(null); paint.setColor(cardColor); canvas.drawPath(cards, paint);
         paint.setColor(baseColor); canvas.drawPath(blocks, paint);
         if (shimmer == null || animator == null || !animator.isStarted()) return;
-        float travel = getWidth() + getHeight() * .55f + dp(240);
-        shaderMatrix.setTranslate(-getHeight() * .55f - dp(120) + phase * travel, 0);
-        shimmer.setLocalMatrix(shaderMatrix); paint.setShader(shimmer);
-        canvas.drawPath(blocks, paint); paint.setShader(null);
+        paint.setShader(shimmer);
+        for (int i = 0; i < blockBounds.size(); i++) {
+            RectF bounds = blockBounds.get(i);
+            float band = bounds.width();
+            float progress = sweep.getInterpolation(loop(phase - blockDelays.get(i) / SWEEP_SECONDS));
+            // The band is as wide as its block and enters and leaves past its edges, so the loop's
+            // wrap happens where nothing is clipped into view.
+            float left = bounds.left - band + progress * band * 2;
+            shaderMatrix.setScale(band, 1); shaderMatrix.postTranslate(left, 0);
+            shimmer.setLocalMatrix(shaderMatrix);
+            clip.reset(); clip.addRoundRect(bounds, blockRadii.get(i), blockRadii.get(i), Path.Direction.CW);
+            canvas.save(); canvas.clipPath(clip); canvas.drawRect(bounds, paint); canvas.restore();
+        }
+        paint.setShader(null);
     }
+    private static float loop(float value) { return value - (float) Math.floor(value); }
     private void updateAnimation() {
         boolean visible = isAttachedToWindow() && isShown() && getWindowVisibility() == VISIBLE && ValueAnimator.areAnimatorsEnabled();
         if (visible && animator == null) {
-            animator = ValueAnimator.ofFloat(0, 1); animator.setDuration(1700);
-            animator.setRepeatCount(ValueAnimator.INFINITE); animator.setInterpolator(new AccelerateDecelerateInterpolator());
+            animator = ValueAnimator.ofFloat(0, 1); animator.setDuration((long) (SWEEP_SECONDS * 1000));
+            animator.setRepeatCount(ValueAnimator.INFINITE); animator.setInterpolator(new LinearInterpolator());
             animator.addUpdateListener(value -> { phase = (float) value.getAnimatedValue(); invalidate(); });
             animator.start();
         } else if (!visible && animator != null) { animator.cancel(); animator = null; invalidate(); }

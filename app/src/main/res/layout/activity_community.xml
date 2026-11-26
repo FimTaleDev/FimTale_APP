@@ -27,8 +27,9 @@
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/communityList"
             android:layout_width="match_parent" android:layout_height="match_parent"
             android:clipToPadding="false" android:padding="8dp" />
-        <ProgressBar android:id="@+id/communityProgress" android:layout_width="48dp"
-            android:layout_height="48dp" android:layout_gravity="center" android:visibility="gone" />
+        <com.fimtale.ui.ShimmerSkeletonView android:id="@+id/communitySkeleton"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:background="?android:attr/colorBackground" android:visibility="gone" />
         <com.fimtale.ui.PageErrorView android:id="@+id/communityStatus"
             android:layout_width="match_parent" android:layout_height="match_parent"
             android:visibility="gone" />

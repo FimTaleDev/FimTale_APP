@@ -9,12 +9,17 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
+import android.webkit.WebView;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import androidx.core.view.NestedScrollingParent3;
 import androidx.core.view.NestedScrollingParentHelper;
 import androidx.core.view.ViewCompat;
+import androidx.core.widget.NestedScrollView;
+import androidx.recyclerview.widget.RecyclerView;
 import com.fimtale.R;
 import com.google.android.material.color.MaterialColors;
 
@@ -78,8 +83,26 @@ public final class PullRefreshLayout extends FrameLayout implements NestedScroll
         positionSpinner();
     }
     private float indicatorCenterY() {
-        // Some pages draw a floating toolbar over the content's top padding.
-        return getPaddingTop() + (content() == null ? 0 : content().getPaddingTop()) + offset / 2;
+        return getPaddingTop() + contentTopInset() + offset / 2;
+    }
+    /** Floating headers keep the reveal below them as top padding on the list, which the empty-state wrappers hide one level deeper. */
+    private int contentTopInset() {
+        View child = content();
+        if (child == null) return 0;
+        int inset = scrollingPaddingTop(child);
+        return inset >= 0 ? inset : child.getPaddingTop();
+    }
+    private static int scrollingPaddingTop(View view) {
+        if (view == null) return -1;
+        if (view instanceof RecyclerView || view instanceof ScrollView
+                || view instanceof NestedScrollView || view instanceof WebView) return view.getPaddingTop();
+        if (!(view instanceof ViewGroup)) return -1;
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            int inset = scrollingPaddingTop(group.getChildAt(i));
+            if (inset >= 0) return inset;
+        }
+        return -1;
     }
     private void positionSpinner() {
         // Vector drawables rasterize to pixel-sized bounds. Use those same bounds for both states.

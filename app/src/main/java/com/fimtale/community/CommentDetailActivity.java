@@ -15,6 +15,7 @@ import com.fimtale.network.ApiErrors;
 import com.fimtale.network.RetrofitClient;
 import com.fimtale.ui.PageErrorView;
 import com.fimtale.ui.PullToRefresh;
+import com.fimtale.ui.ShimmerSkeletonView;
 import com.fimtale.utils.UserPreferences;
 import com.google.android.material.appbar.MaterialToolbar;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public final class CommentDetailActivity extends AppCompatActivity {
     private CommentAdapter adapter;
     private RecyclerView list;
     private PageErrorView error;
+    private ShimmerSkeletonView skeleton;
     private Call<CommentResponse> call;
     private Call<TopicDetailResponse> workCall;
     private int id;
@@ -46,6 +48,8 @@ public final class CommentDetailActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
         findViewById(R.id.communityTabs).setVisibility(View.GONE);
         list = findViewById(R.id.communityList); list.setLayoutManager(new LinearLayoutManager(this));
+        skeleton = findViewById(R.id.communitySkeleton);
+        skeleton.setSkeletonLayout(ShimmerSkeletonView.Layout.COMMENTS);
         adapter = new CommentAdapter(new ArrayList<>(), this);
         adapter.setContext(0, 0, this::load);
         list.setAdapter(adapter); list.setItemAnimator(null);
@@ -61,7 +65,7 @@ public final class CommentDetailActivity extends AppCompatActivity {
         if (call != null) call.cancel();
         if (workCall != null) workCall.cancel();
         session = UserPreferences.getToken(this); final String token = session;
-        loading = true; error.hide(); findViewById(R.id.communityProgress).setVisibility(View.VISIBLE);
+        loading = true; error.hide(); skeleton.setVisibility(View.VISIBLE);
         call = RetrofitClient.getInstance().getCommentViewer(token, id);
         call.enqueue(new Callback<CommentResponse>() {
             @Override public void onResponse(Call<CommentResponse> request, Response<CommentResponse> response) {
@@ -91,7 +95,7 @@ public final class CommentDetailActivity extends AppCompatActivity {
         if (!token.equals(UserPreferences.getToken(this))) { load(); return false; }
         return true;
     }
-    private void finishLoad() { loading = false; PullToRefresh.finish(list); findViewById(R.id.communityProgress).setVisibility(View.GONE); }
+    private void finishLoad() { loading = false; PullToRefresh.finish(list); skeleton.setVisibility(View.GONE); }
     private void showError(String message) { error.show(message, this::load, adapter.getItemCount() > 0); }
     @Override protected void onDestroy() {
         if (call != null) call.cancel(); if (workCall != null) workCall.cancel();

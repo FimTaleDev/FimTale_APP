@@ -18,6 +18,7 @@ import com.fimtale.model.*;
 import com.fimtale.ui.PageErrorView;
 import com.fimtale.ui.BottomSheetMenu;
 import com.fimtale.ui.PullToRefresh;
+import com.fimtale.ui.ShimmerSkeletonView;
 import com.fimtale.utils.UserPreferences;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -33,6 +34,8 @@ public abstract class CommunityListActivity extends AppCompatActivity {
     private TabLayout tabs;
     private Spinner spinner;
     private PageErrorView status;
+    private ShimmerSkeletonView skeleton;
+    private ShimmerSkeletonView.Layout shownLayout;
     private PageErrorView error;
     private int renderedVersion = -1, renderedFolders = -1;
     private CommentAdapter commentAdapter;
@@ -57,6 +60,7 @@ public abstract class CommunityListActivity extends AppCompatActivity {
         scopeMenu.setOnMenuItemClickListener(item -> { chooseTags(); return true; });
         list = findViewById(R.id.communityList); list.setLayoutManager(new LinearLayoutManager(this)); list.setItemAnimator(null);
         status = findViewById(R.id.communityStatus);
+        skeleton = findViewById(R.id.communitySkeleton);
         View listSurface = PageErrorView.withEmptyState(list, status);
         error = PageErrorView.wrap(listSurface);
         spinner = findViewById(R.id.communityFolderSpinner); findViewById(R.id.communityFolderManage).setOnClickListener(v -> manageFolders());
@@ -88,6 +92,16 @@ public abstract class CommunityListActivity extends AppCompatActivity {
     private void login() { startActivity(new Intent(this, LoginActivity.class)); }
     private boolean emptyTags() {
         return followedTagFeedMode() && model.followed.isEmpty() || favoritesMode() && model.tab == 3 && model.tags.isEmpty();
+    }
+    /** Each tab loads a different row, so the first-load placeholder has to follow it. */
+    private static ShimmerSkeletonView.Layout skeletonLayout(CommunityListModel.Kind kind) {
+        switch (kind) {
+            case COMMENT: return ShimmerSkeletonView.Layout.COMMENTS;
+            case TAG: return ShimmerSkeletonView.Layout.TAGS;
+            case USER: return ShimmerSkeletonView.Layout.CONVERSATIONS;
+            case ACTIVITY: return ShimmerSkeletonView.Layout.HISTORY;
+            default: return ShimmerSkeletonView.Layout.ARTICLES;
+        }
     }
     private void render() {
         if (isFinishing() || isDestroyed()) return;
@@ -122,7 +136,9 @@ public abstract class CommunityListActivity extends AppCompatActivity {
         feedMenu.setVisible(favoritesMode() && model.tab == 3 && !guest);
         scopeMenu.setEnabled(followedTagFeedMode() && !model.followed.isEmpty() && !model.loading);
         status.setVisibility(!model.loading && model.error.isEmpty() && model.size() == 0 ? View.VISIBLE : View.GONE);
-        findViewById(R.id.communityProgress).setVisibility(model.loading && model.size() == 0 ? View.VISIBLE : View.GONE);
+        ShimmerSkeletonView.Layout wanted = skeletonLayout(model.kind());
+        if (wanted != shownLayout) { shownLayout = wanted; skeleton.setSkeletonLayout(wanted); }
+        skeleton.setVisibility(model.loading && model.size() == 0 ? View.VISIBLE : View.GONE);
         if (!model.loading) PullToRefresh.finish(list);
         if (model.error.isEmpty()) error.hide(); else error.show(model.error, () -> model.load(model.failedPage), model.size() > 0);
         findViewById(R.id.communityPager).setVisibility(model.totalPages > 1 ? View.VISIBLE : View.GONE);
