@@ -62,9 +62,11 @@ public class DraftsActivity extends AppCompatActivity {
     private String listedUser = "";
     private ShimmerSkeletonView loadingSkeleton;
     private boolean loading;
+    private boolean loginPending;
     private com.fimtale.ui.PageErrorView pageError;
     private final ActivityResultLauncher<Intent> login = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
+                loginPending = false;
                 if (UserPreferences.isLoggedIn(this)) refresh(); else finish();
             });
 
@@ -104,17 +106,19 @@ public class DraftsActivity extends AppCompatActivity {
             if (!UserPreferences.isLoggedIn(this)) { login.launch(new Intent(this, LoginActivity.class)); return; }
             startActivity(EditorActivity.workIntent(this, 0));
         });
-        if (state == null && !UserPreferences.isLoggedIn(this)) login.launch(new Intent(this, LoginActivity.class));
+        if (state == null && !UserPreferences.isLoggedIn(this)) { loginPending = true; login.launch(new Intent(this, LoginActivity.class)); }
     }
     private void setDraftsLoading(boolean loading) {
         this.loading = loading;
         View list = findViewById(R.id.draftsList);
         if (!loading) com.fimtale.ui.PullToRefresh.finish(list);
-        boolean replacing = loading && !com.fimtale.ui.PullToRefresh.isRefreshing(list);
+        // While the login screen is opening there is no state of this page worth painting.
+        boolean blocked = loginPending && items.isEmpty();
+        boolean replacing = blocked || loading && !com.fimtale.ui.PullToRefresh.isRefreshing(list);
         loadingSkeleton.setVisibility(replacing ? View.VISIBLE : View.GONE);
         list.setVisibility(replacing ? View.INVISIBLE : View.VISIBLE);
         com.fimtale.ui.PageErrorView empty = findViewById(R.id.draftsEmpty);
-        if (!loading && items.isEmpty()) empty.showEmpty(getString(R.string.drafts_empty), this::refresh);
+        if (!replacing && !loading && items.isEmpty()) empty.showEmpty(getString(R.string.drafts_empty), this::refresh);
         else empty.hide();
         findViewById(R.id.draftsCreate).setEnabled(!loading);
     }

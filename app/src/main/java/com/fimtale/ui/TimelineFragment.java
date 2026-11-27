@@ -58,6 +58,9 @@ public final class TimelineFragment extends Fragment {
     }
 
     @Override public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        // Know the session before the first frame, otherwise the guest placeholder is painted and
+        // then withdrawn as soon as onResume syncs it.
+        session = UserPreferences.getToken(requireContext());
         list = view.findViewById(R.id.timelineList);
         refresh = view.findViewById(R.id.timelineRefresh);
         pageError = PageErrorView.wrap(refresh);
@@ -255,7 +258,9 @@ public final class TimelineFragment extends Fragment {
         if (list == null) return;
         boolean guest = session == null || session.isEmpty();
         if (!loading && !loadingAuth) refresh.setRefreshing(false);
-        boolean replacing = !guest && loading && failedReset && !refresh.isRefreshing();
+        // Nothing loaded yet is the first load, not an empty feed.
+        boolean first = !guest && feed.page == 0 && error == null;
+        boolean replacing = !guest && !refresh.isRefreshing() && (first || loading && failedReset);
         if (!guest && error != null && !loading)
             pageError.show(error, () -> load(failedReset), !feed.items.isEmpty());
         else if (!guest && authError != null && !loading)
@@ -274,14 +279,14 @@ public final class TimelineFragment extends Fragment {
         composeAction.setText(canPost ? getString(R.string.timeline_post) : activating ? getString(R.string.timeline_opening_space) : getString(R.string.timeline_open_space));
         composeAction.setEnabled(!activating && !loadingAuth);
         composeCard.setEnabled(!activating && !loadingAuth);
-        boolean empty = !guest && !loading && error == null && feed.items.isEmpty();
+        boolean empty = !guest && feed.page > 0 && !loading && error == null && feed.items.isEmpty();
         if (!guest && !loading && error != null) footerState.show(error, () -> load(failedReset));
         else if (empty) footerState.showEmpty(getString(R.string.timeline_empty), () -> { load(true); loadAuth(); });
         else footerState.hide();
         footerText.setText(loading ? getString(R.string.common_loading_active)
                 : !empty && error == null && feed.finished ? getString(R.string.common_list_end) : "");
         footerText.setVisibility(footerText.length() > 0 ? View.VISIBLE : View.GONE);
-        loadMore.setVisibility(!guest && !empty && error == null && !feed.finished ? View.VISIBLE : View.GONE);
+        loadMore.setVisibility(!guest && feed.page > 0 && !empty && error == null && !feed.finished ? View.VISIBLE : View.GONE);
         loadMore.setEnabled(!loading);
         loadMore.setText(error != null ? getString(R.string.common_retry) : loading ? getString(R.string.common_loading) : getString(R.string.common_load_more));
     }
